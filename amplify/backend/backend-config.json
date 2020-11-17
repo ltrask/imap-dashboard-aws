@@ -1,0 +1,10 @@
+{
+  "auth": {
+    "imapdashboardawsb1628ee8": {
+      "service": "Cognito",
+      "providerPlugin": "awscloudformation",
+      "dependsOn": [],
+      "customAuth": false
+    }
+  }
+}
