@@ -2,7 +2,7 @@ import React from 'react';
 import './App.css';
 import { makeStyles } from '@material-ui/core/styles';
 import {kaiTheme} from "./style/kaiTheme";
-import { AmplifyAuthenticator, AmplifySignUp, AmplifySignIn, AmplifySignOut} from '@aws-amplify/ui-react';
+import { AmplifyAuthenticator, AmplifySignUp, AmplifySignIn} from '@aws-amplify/ui-react';
 import {AuthState, onAuthUIStateChange} from '@aws-amplify/ui-components';
 import AppBar from "@material-ui/core/AppBar";
 import {MuiThemeProvider, createMuiTheme} from "@material-ui/core/styles";
@@ -12,6 +12,7 @@ import {AccountCircle} from "@material-ui/icons";
 import IconButton from "@material-ui/core/IconButton";
 import MenuItem from "@material-ui/core/MenuItem";
 import Menu from "@material-ui/core/Menu";
+import Main from "./Main/Main";
 
 const useStyles = makeStyles((theme) => ({
     root: {
@@ -72,9 +73,9 @@ const AuthStateApp = () => {
     return authState === AuthState.SignedIn && user ? (
         <div className="App">
             <MuiThemeProvider theme={theme}>
-                {/*<Main/>*/}
-                Signed in!
-                <AmplifySignOut/>
+                <Main/>
+                {/*Signed in!*/}
+                {/*<AmplifySignOut/>*/}
             </MuiThemeProvider>
         </div>
     ) : (
