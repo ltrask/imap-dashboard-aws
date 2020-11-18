@@ -12,11 +12,14 @@ import CustomSliderInput from "../Dashboard/CustomSliderInput";
 // import BasisPaginationGrid from "../Table/SimpleTable";
 
 export default function SensitivityDashboardV2(props) {
-    const maxDetourWeight = 2.0;
-    const maxNationalImpWeight = 2.0;
-    const maxSeverityIndexWeight = 2.0;
-    const maxGrowthWeight = 2.0;
-    const maxSeasonalWeight = 2.0;
+    const maxAlphaWeight = 100;
+    const weightFactorStep = 0.01;
+    const weightFactorMin = 0.0;
+    const maxDetourWeight = 1.0;
+    const maxNationalImpWeight = 1.0;
+    const maxSeverityIndexWeight = 1.0;
+    const maxGrowthWeight = 1.0;
+    const maxSeasonalWeight = 1.0;
     const [maxPriority, setMaxPriority] = useState(-1);
     const [primaryLayer, setPrimaryLayer] = useState(null);
     const [colorScale, setColorScale] = useState('Viridis');
@@ -24,11 +27,12 @@ export default function SensitivityDashboardV2(props) {
     const [hoverLayer, setHoverLayer] = useState(null);
     const [colorValueType, setColorValueType] = useState('priority');
     const [maxIncidentFac, setMaxIncidentFac] = useState(100.0);
-    const [detourWeight, setDetourWeight] = useState(1.0);
-    const [nationalImpWeight, setNationalImpWeight] = useState(1.0);
-    const [severityIndexWeight, setSeverityIndexWeight] = useState(1.0);
-    const [growthWeight, setGrowthWeight] = useState(1.0);
-    const [seasonalWeight, setSeasonalWeight] = useState(1.0);
+    const [alpha, setAlpha] = useState(5);
+    const [detourWeight, setDetourWeight] = useState(0.5);
+    const [nationalImpWeight, setNationalImpWeight] = useState(0.5);
+    const [severityIndexWeight, setSeverityIndexWeight] = useState(0.5);
+    const [growthWeight, setGrowthWeight] = useState(0.5);
+    const [seasonalWeight, setSeasonalWeight] = useState(0.5);
     const [updateColors, setUpdateColors] = useState(false);
     const [mapComponent, setMapComponent] = useState(null);
 
@@ -47,6 +51,10 @@ export default function SensitivityDashboardV2(props) {
             option.selected = true;
         }
         return option;
+    }
+
+    function handleAlphaChange(event, value) {
+        setAlpha(value);
     }
 
     function handleDetourChange(event, value) {
@@ -69,6 +77,10 @@ export default function SensitivityDashboardV2(props) {
         setSeasonalWeight(value);
     }
 
+    function handleAlphaChangeCommit(event, value) {
+        handleAlphaChange(event, value);
+        setUpdateColors(true);
+    }
 
     function handleDetourChangeCommit(event, value) {
         handleDetourChange(event, value);
@@ -92,6 +104,12 @@ export default function SensitivityDashboardV2(props) {
 
     function handleSeasonalChangeCommit(event, value) {
         handleSeasonalChange(event, value);
+        setUpdateColors(true);
+    }
+
+    function handleAlphaInputChange(event) {
+        let value = event.target.value === '' ? 1.0 : Number(event.target.value);
+        handleAlphaChange(event, value);
         setUpdateColors(true);
     }
 
@@ -125,10 +143,18 @@ export default function SensitivityDashboardV2(props) {
         setUpdateColors(true);
     }
 
+    function handleAlphaBlur() {
+        if (alpha < 1.0) {
+            setAlpha(1.0);
+        } else if (alpha > maxAlphaWeight) {
+            setAlpha(maxAlphaWeight);
+        }
+    }
+
     function handleDetourBlur() {
         if (detourWeight < 0) {
             setDetourWeight(0)
-        } else if (detourWeight < maxDetourWeight) {
+        } else if (detourWeight > maxDetourWeight) {
             setDetourWeight(maxDetourWeight)
         }
     }
@@ -136,7 +162,7 @@ export default function SensitivityDashboardV2(props) {
     function handleNationalImpBlur() {
         if (nationalImpWeight < 0) {
             setNationalImpWeight(0)
-        } else if (nationalImpWeight < maxNationalImpWeight) {
+        } else if (nationalImpWeight > maxNationalImpWeight) {
             setNationalImpWeight(maxNationalImpWeight)
         }
     }
@@ -144,7 +170,7 @@ export default function SensitivityDashboardV2(props) {
     function handleSeverityIndexBlur() {
         if (severityIndexWeight < 0) {
             setSeverityIndexWeight(0)
-        } else if (severityIndexWeight < maxSeverityIndexWeight) {
+        } else if (severityIndexWeight > maxSeverityIndexWeight) {
             setSeverityIndexWeight(maxSeverityIndexWeight)
         }
     }
@@ -152,7 +178,7 @@ export default function SensitivityDashboardV2(props) {
     function handleGrowthBlur() {
         if (growthWeight < 0) {
             setGrowthWeight(0)
-        } else if (growthWeight < maxGrowthWeight) {
+        } else if (growthWeight > maxGrowthWeight) {
             setGrowthWeight(maxGrowthWeight)
         }
     }
@@ -160,7 +186,7 @@ export default function SensitivityDashboardV2(props) {
     function handleSeasonalBlur() {
         if (seasonalWeight < 0) {
             setSeasonalWeight(0)
-        } else if (seasonalWeight < maxSeasonalWeight) {
+        } else if (seasonalWeight > maxSeasonalWeight) {
             setSeasonalWeight(maxSeasonalWeight)
         }
     }
@@ -221,13 +247,19 @@ export default function SensitivityDashboardV2(props) {
         let priorityScore = -1;
         if (hasAllScores) {
             if (isAdjusted) {
-                priorityScore = incidentFactorVal * (detourFactorVal*detourWeight + severityIndexFactorVal*severityIndexWeight + nationalImpFactorVal*nationalImpWeight + growthFactorVal*growthWeight + seasonalFactorVal*seasonalWeight);
+                let sumAllAdjust = (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight);
+                let adjDetour = detourFactorVal * detourWeight / sumAllAdjust;
+                let adjNatImp = nationalImpFactorVal * nationalImpWeight / sumAllAdjust;
+                let adjSevInd = severityIndexFactorVal * severityIndexWeight / sumAllAdjust;
+                let adjGrowth = growthFactorVal * growthWeight / sumAllAdjust;
+                let adjSeason = seasonalFactorVal * seasonalWeight / sumAllAdjust;
+                priorityScore = incidentFactorVal * alpha * (adjDetour + adjNatImp + adjSevInd + adjGrowth + adjSeason);
             } else {
                 priorityScore = incidentFactorVal * (detourFactorVal + severityIndexFactorVal + nationalImpFactorVal + growthFactorVal + seasonalFactorVal);
             }
         }
         return priorityScore;
-    }, [detourWeight, growthWeight, nationalImpWeight, seasonalWeight, severityIndexWeight]);
+    }, [alpha, detourWeight, growthWeight, nationalImpWeight, seasonalWeight, severityIndexWeight]);
 
     const getColorByProp = useCallback((f_props, isReset) => {
         // const colorVal = Math.max(Math.min(f_props["inc_fac"] - 1, 1), 0);
@@ -391,7 +423,8 @@ export default function SensitivityDashboardV2(props) {
             let adjustedGrowth = -1;
             let adjustedSeasonal = -1;
             if (hasAllScores) {
-                priorityScore = incidentFactorVal * (detourFactorVal + severityIndexFactorVal + nationalImpFactorVal+ growthFactorVal + seasonalFactorVal)
+                // Divide by 5 to equally weight the five factors
+                priorityScore = incidentFactorVal * (detourFactorVal + severityIndexFactorVal + nationalImpFactorVal+ growthFactorVal + seasonalFactorVal) / 5.0;
                 adjustedDetour = detourFactorVal * detourWeight;
                 adjustedSeverity = severityIndexFactorVal * severityIndexWeight;
                 adjustedNationalImp = nationalImpFactorVal * nationalImpWeight;
@@ -513,7 +546,11 @@ export default function SensitivityDashboardV2(props) {
             priorityList.sort(function(a, b) { return a - b });
             let index50 = Math.ceil(priorityList.length * 0.5)
             console.log('50th Priority: ' + priorityList[index50]);
-            let priorityThreshold = priorityList[index50];
+            let index85 = Math.ceil(priorityList.length * 0.85)
+            console.log('85th Priority: ' + priorityList[index85]);
+            let index90 = Math.ceil(priorityList.length * 0.9)
+            console.log('90th Priority: ' + priorityList[index90]);
+            let priorityThreshold = priorityList[index85];
 
             // Create overlay layers object for layer cotnrol
             let roadwayLabel = props.primaryLayerName || "Roadway Data"
@@ -654,64 +691,87 @@ export default function SensitivityDashboardV2(props) {
                         Use the following sliders and/or numeric inputs to specify different weights for the six factors.
                         <div>
                             <CustomSliderInput
+                                id="input-slider-alpha"
+                                label="Alpha"
+                                value={alpha}
+                                step={1}
+                                min={1}
+                                max={maxAlphaWeight}
+                                funcHandleSlide={handleAlphaChange}
+                                funcSliderChangeCommit={handleAlphaChangeCommit}
+                                funcInputChange={handleAlphaInputChange}
+                                funcBlur={handleAlphaBlur}
+                                showInput={true}
+                            />
+                            <CustomSliderInput
                                 id="input-slider-detour"
                                 label="Detour Factor"
                                 value={detourWeight}
-                                step={0.01}
-                                min={1.0}
+                                step={weightFactorStep}
+                                min={weightFactorMin}
                                 max={maxDetourWeight}
                                 funcHandleSlide={handleDetourChange}
                                 funcSliderChangeCommit={handleDetourChangeCommit}
                                 funcInputChange={handleDetourInputChange}
                                 funcBlur={handleDetourBlur}
+                                showInput={false}
+                                percentStr={(100.0 * detourWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
                             />
                             <CustomSliderInput
                                 id="input-slider-national-importance"
                                 label="National Importance Factor"
                                 value={nationalImpWeight}
-                                step={0.01}
-                                min={1.0}
+                                step={weightFactorStep}
+                                min={weightFactorMin}
                                 max={maxNationalImpWeight}
                                 funcHandleSlide={handleNationalImpChange}
                                 funcSliderChangeCommit={handleNationalImpChangeCommit}
                                 funcInputChange={handleNationalImpInputChange}
                                 funcBlur={handleNationalImpBlur}
+                                showInput={false}
+                                percentStr={(100.0 * nationalImpWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
                             />
                             <CustomSliderInput
                                 id="input-slider-severity-index"
                                 label="Severity Index Factor"
                                 value={severityIndexWeight}
-                                step={0.01}
-                                min={1.0}
+                                step={weightFactorStep}
+                                min={weightFactorMin}
                                 max={maxSeverityIndexWeight}
                                 funcHandleSlide={handleSeverityIndexChange}
                                 funcSliderChangeCommit={handleSeverityIndexChangeCommit}
                                 funcInputChange={handleSeverityIndexInputChange}
                                 funcBlur={handleSeverityIndexBlur}
+                                showInput={false}
+                                percentStr={(100.0 * severityIndexWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
                             />
                             <CustomSliderInput
                                 id="input-slider-growth"
                                 label="Growth Factor"
                                 value={growthWeight}
-                                step={0.01}
-                                min={1.0}
+                                step={weightFactorStep}
+                                min={weightFactorMin}
                                 max={maxGrowthWeight}
                                 funcHandleSlide={handleGrowthChange}
                                 funcSliderChangeCommit={handleGrowthChangeCommit}
                                 funcInputChange={handleGrowthInputChange}
                                 funcBlur={handleGrowthBlur}
+                                showInput={false}
+                                percentStr={(100.0 * growthWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
                             />
                             <CustomSliderInput
                                 id="input-slider-seasonal"
                                 label="Seasonal Factor"
                                 value={seasonalWeight}
-                                step={0.01}
-                                min={1.0}
+                                step={weightFactorStep}
+                                min={weightFactorMin}
                                 max={maxSeasonalWeight}
                                 funcHandleSlide={handleSeasonalChange}
                                 funcSliderChangeCommit={handleSeasonalChangeCommit}
                                 funcInputChange={handleSeasonalInputChange}
                                 funcBlur={handleSeasonalBlur}
+                                showInput={false}
+                                percentStr={(100.0 * seasonalWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
                             />
                         </div>
                     </Paper>

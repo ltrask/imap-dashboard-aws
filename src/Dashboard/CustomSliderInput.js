@@ -10,16 +10,13 @@ class CustomSliderInput extends React.Component {
             <div>
                 <Typography variant="caption" id={this.props.id}>{this.props.label}</Typography>
                 <Grid container spacing={2} alignItems="center">
-                    <Grid item xs>
-                        <Slider value={this.props.value}
-                                onChange={this.props.funcHandleSlide}
-                                onChangeCommitted={this.props.funcSliderChangeCommit}
-                                step={this.props.step}
-                                min={this.props.min}
-                                max={this.props.max}
-                                aria-labelledby={this.props.id}/>
-                    </Grid>
-                    <Grid item>
+                    {this.props.percentStr &&
+                        <Grid item style={{width: '75px'}}>
+                            {this.props.percentStr}
+                        </Grid>
+                    }
+                    {this.props.showInput &&
+                    <Grid item style={{width: '75px'}}>
                         <Input
                             value={this.props.value}
                             margin="dense"
@@ -33,6 +30,16 @@ class CustomSliderInput extends React.Component {
                                 'aria-labelledby': this.props.id
                             }}
                         />
+                    </Grid>
+                    }
+                    <Grid item xs>
+                        <Slider value={this.props.value}
+                                onChange={this.props.funcHandleSlide}
+                                onChangeCommitted={this.props.funcSliderChangeCommit}
+                                step={this.props.step}
+                                min={this.props.min}
+                                max={this.props.max}
+                                aria-labelledby={this.props.id}/>
                     </Grid>
                 </Grid>
             </div>
