@@ -4,7 +4,7 @@ backend:
     build:
       commands:
         - '# Execute Amplify CLI with the helper script'
-        - nvm install 12.13.0 && nvm use 12.13
+        - nvm install 12.13.0 && nvm use 12.13 && npm install -g @aws-amplify/cli@4.32.1
         - amplifyPush --simple
 frontend:
   phases:
