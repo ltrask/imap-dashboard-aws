@@ -7,9 +7,12 @@ import React from "react";
 class CustomSliderInput extends React.Component {
     render() {
         return (
-            <div>
-                <Typography variant="caption" id={this.props.id}>{this.props.label}</Typography>
+            <div style={{height:"34pt"}}>
+                {/*<Typography variant="caption" id={this.props.id}>{this.props.label}</Typography>*/}
                 <Grid container spacing={2} alignItems="center">
+                    <Grid item style={{width:"120px"}}>
+                        <Typography variant="caption" id={this.props.id}>{this.props.label}</Typography>
+                    </Grid>
                     {this.props.percentStr &&
                         <Grid item style={{width: '75px'}}>
                             {this.props.percentStr}

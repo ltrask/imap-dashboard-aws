@@ -9,6 +9,8 @@ import 'leaflet-draw/dist/leaflet.draw.css';
 import Paper from "@material-ui/core/Paper";
 import {Typography} from "@material-ui/core";
 import CustomSliderInput from "../Dashboard/CustomSliderInput";
+import {ResponsiveBar} from "@nivo/bar";
+import {kaiTheme} from "../style/kaiTheme";
 // import BasisPaginationGrid from "../Table/SimpleTable";
 
 export default function SensitivityDashboardV2(props) {
@@ -35,6 +37,7 @@ export default function SensitivityDashboardV2(props) {
     const [seasonalWeight, setSeasonalWeight] = useState(0.5);
     const [updateColors, setUpdateColors] = useState(false);
     const [mapComponent, setMapComponent] = useState(null);
+    const [histData, setHistData] = useState(null);
 
     const ensureNumber = (val, parseFunc) => {
         if (typeof(val) === 'string') {
@@ -255,7 +258,7 @@ export default function SensitivityDashboardV2(props) {
                 let adjSeason = seasonalFactorVal * seasonalWeight / sumAllAdjust;
                 priorityScore = incidentFactorVal * alpha * (adjDetour + adjNatImp + adjSevInd + adjGrowth + adjSeason);
             } else {
-                priorityScore = incidentFactorVal * (detourFactorVal + severityIndexFactorVal + nationalImpFactorVal + growthFactorVal + seasonalFactorVal);
+                priorityScore = incidentFactorVal * (detourFactorVal + severityIndexFactorVal + nationalImpFactorVal + growthFactorVal + seasonalFactorVal) / 5.0;
             }
         }
         return priorityScore;
@@ -276,25 +279,25 @@ export default function SensitivityDashboardV2(props) {
                 if (!f_props["priority"] || maxPriority < 0) {
                     return 'cyan';
                 }
-                colorVal = Math.max(Math.min((computePriorityScore(f_props, true) / maxPriority), 1), 0);
+                colorVal = Math.max(Math.min((f_props['adj_priority'] / maxPriority), 1), 0);
                 break;
             case 'inc_fac':
                 colorVal = Math.max(Math.min((f_props["inc_fac"] / maxIncidentFac), 1), 0);
                 break;
             case 'detour_fac':
-                colorVal = Math.max(Math.min(f_props[colorValueType], 1), 0) * detourWeight;
+                colorVal = Math.max(Math.min(f_props[colorValueType], 1), 0);// * detourWeight;
                 break;
             case 'nat_imp_fac':
-                colorVal = Math.max(Math.min(f_props[colorValueType], 1), 0) * nationalImpWeight;
+                colorVal = Math.max(Math.min(f_props[colorValueType], 1), 0);// * nationalImpWeight;
                 break;
             case 'si_fac':
-                colorVal = Math.max(Math.min(f_props[colorValueType], 1), 0) * severityIndexWeight;
+                colorVal = Math.max(Math.min(f_props[colorValueType], 1), 0);// * severityIndexWeight;
                 break;
             case 'growth_fac':
-                colorVal = Math.max(Math.min(f_props[colorValueType], 1), 0) * growthWeight;
+                colorVal = Math.max(Math.min(f_props[colorValueType], 1), 0);// * growthWeight;
                 break;
             case 'seasonal_fac':
-                colorVal = Math.max(Math.min(f_props[colorValueType], 1), 0) * seasonalWeight;
+                colorVal = Math.max(Math.min(f_props[colorValueType], 1), 0);// * seasonalWeight;
                 break;
         }
 
@@ -309,7 +312,7 @@ export default function SensitivityDashboardV2(props) {
         } else {
             return d3.interpolateReds(colorVal);
         }
-    }, [colorScale, colorValueType, computePriorityScore, detourWeight, growthWeight, maxIncidentFac, maxPriority, nationalImpWeight, seasonalWeight, severityIndexWeight]);
+    }, [colorScale, colorValueType, maxIncidentFac, maxPriority]);
 
     // function styleRoadway(feature, isReset) {
     //     let wt = 2;
@@ -373,7 +376,11 @@ export default function SensitivityDashboardV2(props) {
     function handleVisualizationMetricChange() {
         console.log("Metric change triggered");
         console.log(document.getElementById('legend-metric-select').value);
-        setColorValueType(document.getElementById('legend-metric-select').value);
+        let selValueType = document.getElementById('legend-metric-select').value;
+        setColorValueType(selValueType);
+        if (selValueType !== 'priority') {
+            document.getElementById("legend-max-label").innerHTML = "1.0"
+        }
         setUpdateColors(true);
     }
 
@@ -415,23 +422,6 @@ export default function SensitivityDashboardV2(props) {
                 hasAllScores = false;
             }
 
-            let priorityScore = -1;
-            let adjustedPriorityScore = -1;
-            let adjustedDetour = -1;
-            let adjustedSeverity = -1;
-            let adjustedNationalImp = -1;
-            let adjustedGrowth = -1;
-            let adjustedSeasonal = -1;
-            if (hasAllScores) {
-                // Divide by 5 to equally weight the five factors
-                priorityScore = incidentFactorVal * (detourFactorVal + severityIndexFactorVal + nationalImpFactorVal+ growthFactorVal + seasonalFactorVal) / 5.0;
-                adjustedDetour = detourFactorVal * detourWeight;
-                adjustedSeverity = severityIndexFactorVal * severityIndexWeight;
-                adjustedNationalImp = nationalImpFactorVal * nationalImpWeight;
-                adjustedGrowth = growthFactorVal * growthWeight;
-                adjustedSeasonal = seasonalFactorVal * seasonalWeight;
-                adjustedPriorityScore = incidentFactorVal * (adjustedDetour + adjustedSeverity + adjustedNationalImp + adjustedGrowth + adjustedSeasonal)
-            }
             mapInfoDiv._div.innerHTML = '<h4>Segment Info</h4>';
             mapInfoDiv._div.innerHTML += '<br /><b>Route ID: </b> ' + hoverLayer.feature.properties["route_id"];
             mapInfoDiv._div.innerHTML += '<br /><b>Functional Class: </b> ' + hoverLayer.feature.properties["route_class"];
@@ -441,12 +431,12 @@ export default function SensitivityDashboardV2(props) {
             if (hasAllScores) {
                 let tableStr =  '<table><thead><tr><th>Factor</th><th>Adjusted</th><th>Raw</th></tr></thead>';
                 tableStr += '<tbody>';
-                tableStr += '<tr><td>Priority</td><td>' + adjustedPriorityScore.toFixed(2) +'</td><td>' + priorityScore.toFixed(2) +'</td></tr>';
-                tableStr += '<tr><td>Detour</td><td>' + adjustedDetour.toFixed(2) +'</td><td>' + detourFactorVal.toFixed(2) +'</td></tr>';
-                tableStr += '<tr><td>National Importance</td><td>' + adjustedNationalImp.toFixed(2) +'</td><td>' + nationalImpFactorVal.toFixed(2) +'</td></tr>';
-                tableStr += '<tr><td>Severity Index</td><td>' + adjustedSeverity.toFixed(2) +'</td><td>' + severityIndexFactorVal.toFixed(2) +'</td></tr>';
-                tableStr += '<tr><td>Growth</td><td>' + adjustedGrowth.toFixed(2) +'</td><td>' + growthFactorVal.toFixed(2) +'</td></tr>';
-                tableStr += '<tr><td>Seasonal</td><td>' + adjustedSeasonal.toFixed(2) +'</td><td>' + seasonalFactorVal.toFixed(2) + '</td></tr>';
+                tableStr += '<tr><td>Priority</td><td>' + hoverLayer.feature.properties['adj_priority'].toFixed(2) +'</td><td>' + hoverLayer.feature.properties['priority'].toFixed(2) +'</td></tr>';
+                tableStr += '<tr><td>Detour</td><td> </td><td>' + detourFactorVal.toFixed(2) +'</td></tr>';
+                tableStr += '<tr><td>National Importance</td><td> </td><td>' + nationalImpFactorVal.toFixed(2) +'</td></tr>';
+                tableStr += '<tr><td>Severity Index</td><td> </td><td>' + severityIndexFactorVal.toFixed(2) +'</td></tr>';
+                tableStr += '<tr><td>Growth</td><td> </td><td>' + growthFactorVal.toFixed(2) +'</td></tr>';
+                tableStr += '<tr><td>Seasonal</td><td> </td><td>' + seasonalFactorVal.toFixed(2) + '</td></tr>';
                 tableStr+= '</tbody></table>';
                 mapInfoDiv._div.innerHTML += tableStr;
             }
@@ -462,7 +452,7 @@ export default function SensitivityDashboardV2(props) {
                 '<br>ratio and the line width' +
                 '<br>reflects AADT.';
         }
-    }, [detourWeight, growthWeight, hoverLayer, mapInfoDiv, nationalImpWeight, seasonalWeight, severityIndexWeight]);
+    }, [hoverLayer, mapInfoDiv]);
 
     const resetHighlight = useCallback((e) => {
         if (e) {
@@ -476,6 +466,61 @@ export default function SensitivityDashboardV2(props) {
         setHoverLayer(null);
         resetHighlight(e.target);
     }, [resetHighlight])
+    
+    const createBinsFromData = useCallback((dataList, adjDataList) => {
+        const bins = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+        console.log("createBinsCalled");
+        let ub = 1;
+        let currBinCount = 0;
+        let dataMap = {};
+        for (let pIdx = 0; pIdx < dataList.length; pIdx++) {
+            if (dataList[pIdx] > bins[ub]) {
+                if (ub === bins.length -1) {
+                    currBinCount++;
+                }
+                dataMap[(bins[ub-1]+'-'+bins[ub])] = {raw:currBinCount};
+                currBinCount = 0;
+                ub++;
+            } else {
+                currBinCount++;
+            }
+        }
+        dataMap[bins[bins.length-1]+'+'] = {raw:currBinCount};
+
+        ub = 1;
+        currBinCount = 0;
+        for (let pIdx = 0; pIdx < adjDataList.length; pIdx++) {
+            if (adjDataList[pIdx] > bins[ub]) {
+                if (ub === bins.length -1) {
+                    currBinCount++;
+                }
+                dataMap[(bins[ub-1]+'-'+bins[ub])]['adj'] = currBinCount;
+                currBinCount = 0;
+                ub++;
+            } else {
+                currBinCount++;
+            }
+        }
+        dataMap[bins[bins.length-1]+'+']['adj'] = currBinCount;
+
+        let pdfData = [];
+        for (let bi = 1; bi < bins.length; bi++) {
+            let binStr = (bins[bi-1]+'-'+bins[bi]);
+            pdfData.push({
+                bin: binStr,
+                "Base Priority": dataMap[binStr]['raw'],
+                "Adj Priority": dataMap[binStr]['adj']
+            })
+        }
+        let binStr = bins[bins.length-1]+'+';
+        pdfData.push({bin: binStr, "Base Priority": dataMap[binStr]['raw'], "Adj Priority": dataMap[binStr]['adj'] });
+        console.log(pdfData);
+        return pdfData;
+    }, []);
+
+    const updateChart = useCallback(() => {
+        console.log("Chart to be updated");
+    }, [])
 
     useEffect(() => {
         if (!mapComponent) {
@@ -531,19 +576,18 @@ export default function SensitivityDashboardV2(props) {
             // Set Up click and hover (mouseover/mouseout) events for the roadway segments
             const layerKeys = Object.keys(segData._layers);
             let priorityList = [];
-            let maxPriorityScore = -1;
+            let adjPriorityList = [];
             for (const key of layerKeys) {
                 segData._layers[key].feature.properties['priority'] = computePriorityScore(segData._layers[key].feature.properties, false)
+                segData._layers[key].feature.properties['adj_priority'] = computePriorityScore(segData._layers[key].feature.properties, true)
                 priorityList.push(segData._layers[key].feature.properties['priority']);
-                if (segData._layers[key].feature.properties['priority']  > maxPriorityScore) {
-                    maxPriorityScore = segData._layers[key].feature.properties['priority'];
-                }
+                adjPriorityList.push(segData._layers[key].feature.properties['adj_priority'])
             //     segData._layers[key].on('click', handleClick);
             //     segData._layers[key].on('mouseover', handleFeatureMouseover);
             //     segData._layers[key].on('mouseout', handleFeatureMouseout);
             }
-            console.log('Max Priority: ' + maxPriorityScore);
             priorityList.sort(function(a, b) { return a - b });
+            adjPriorityList.sort(function(a, b) { return a - b });
             let index50 = Math.ceil(priorityList.length * 0.5)
             console.log('50th Priority: ' + priorityList[index50]);
             let index85 = Math.ceil(priorityList.length * 0.85)
@@ -551,6 +595,15 @@ export default function SensitivityDashboardV2(props) {
             let index90 = Math.ceil(priorityList.length * 0.9)
             console.log('90th Priority: ' + priorityList[index90]);
             let priorityThreshold = priorityList[index85];
+            let pdfData = createBinsFromData(priorityList, adjPriorityList);
+            setHistData(pdfData);
+            // let pdfData = [
+            //     { quarter: 1, earnings: 13000 },
+            //     { quarter: 2, earnings: 16500 },
+            //     { quarter: 3, earnings: 14250 },
+            //     { quarter: 4, earnings: 19000 }
+            // ];
+
 
             // Create overlay layers object for layer cotnrol
             let roadwayLabel = props.primaryLayerName || "Roadway Data"
@@ -601,6 +654,7 @@ export default function SensitivityDashboardV2(props) {
                 minLabel.innerHTML = "0.0";
                 minLabel.style.float = 'left';
                 let maxLabel = document.createElement('span');
+                maxLabel.id="legend-max-label";
                 let maxRangeVal = 1.0;
                 switch (colorValueType) {
                     case "priority":
@@ -641,11 +695,17 @@ export default function SensitivityDashboardV2(props) {
             setUpdateColors(true);
             setMapComponent(map);
         }
-    }, [colorScale, colorValueType, computePriorityScore, handleFeatureMouseout, handleLegendColorChange, mapComponent, maxPriority, props.mapCenter, props.primaryLayer, props.primaryLayerName, styleRoadway]);
+    }, [colorScale, colorValueType, computePriorityScore, createBinsFromData, handleFeatureMouseout, handleLegendColorChange, mapComponent, maxPriority, props.mapCenter, props.primaryLayer, props.primaryLayerName, styleRoadway]);
 
     useEffect(() => {
         console.log("Max Priority Set to: " + maxPriority);
-    }, [maxPriority])
+        if (colorValueType === 'priority') {
+            let maxLabelDiv = document.getElementById('legend-max-label');
+            if (maxLabelDiv) {
+                maxLabelDiv.innerHTML = maxPriority.toFixed(1);
+            }
+        }
+    }, [colorValueType, maxPriority])
 
     useEffect(() => {
         if (mapInfoDiv) {
@@ -657,12 +717,32 @@ export default function SensitivityDashboardV2(props) {
         console.log("updateColors effect called");
         if (updateColors && primaryLayer !== null) {
             console.log("Update Colors: " + updateColors);
+            const layerKeys = Object.keys(primaryLayer._layers);
+            let priorityList = [];
+            let adjPriorityList = [];
+            for (const key of layerKeys) {
+                primaryLayer._layers[key].feature.properties['adj_priority'] = computePriorityScore(primaryLayer._layers[key].feature.properties, true);
+                priorityList.push(primaryLayer._layers[key].feature.properties['priority']);
+                adjPriorityList.push(primaryLayer._layers[key].feature.properties['adj_priority']);
+            }
+
+            priorityList.sort(function(a, b) { return a - b });
+            adjPriorityList.sort(function(a, b) { return a - b });
+            let pdfData = createBinsFromData(priorityList, adjPriorityList);
+            setHistData(pdfData);
+            let index85 = Math.ceil(priorityList.length * 0.85)
+            let priorityThreshold = adjPriorityList[index85];
+            setMaxPriority(priorityThreshold);
             primaryLayer.eachLayer(function (layer) {
                 layer.setStyle(styleRoadway(layer.feature));
             });
             setUpdateColors(false);
         }
-    }, [primaryLayer, styleRoadway, updateColors]);
+    }, [computePriorityScore, createBinsFromData, primaryLayer, styleRoadway, updateChart, updateColors]);
+
+    useEffect(() => {
+        console.log("Prority Threshold Set: " + maxPriority.toFixed(2));
+    }, [maxPriority]);
 
     useEffect(() => {
         if (mapInfoDiv) {
@@ -686,95 +766,157 @@ export default function SensitivityDashboardV2(props) {
                     </Paper>
                 </div>
                 <div style={{width: "34%", height: "100%", paddingLeft: "5px", paddingRight: "5px"}}>
-                    <Paper className='card' style={{height: '100%', marginTop: "10px", padding: "10px"}}>
-                        <Typography variant={"h5"}>Factor Weighting Adjustments</Typography>
-                        Use the following sliders and/or numeric inputs to specify different weights for the six factors.
-                        <div>
-                            <CustomSliderInput
-                                id="input-slider-alpha"
-                                label="Alpha"
-                                value={alpha}
-                                step={1}
-                                min={1}
-                                max={maxAlphaWeight}
-                                funcHandleSlide={handleAlphaChange}
-                                funcSliderChangeCommit={handleAlphaChangeCommit}
-                                funcInputChange={handleAlphaInputChange}
-                                funcBlur={handleAlphaBlur}
-                                showInput={true}
-                            />
-                            <CustomSliderInput
-                                id="input-slider-detour"
-                                label="Detour Factor"
-                                value={detourWeight}
-                                step={weightFactorStep}
-                                min={weightFactorMin}
-                                max={maxDetourWeight}
-                                funcHandleSlide={handleDetourChange}
-                                funcSliderChangeCommit={handleDetourChangeCommit}
-                                funcInputChange={handleDetourInputChange}
-                                funcBlur={handleDetourBlur}
-                                showInput={false}
-                                percentStr={(100.0 * detourWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
-                            />
-                            <CustomSliderInput
-                                id="input-slider-national-importance"
-                                label="National Importance Factor"
-                                value={nationalImpWeight}
-                                step={weightFactorStep}
-                                min={weightFactorMin}
-                                max={maxNationalImpWeight}
-                                funcHandleSlide={handleNationalImpChange}
-                                funcSliderChangeCommit={handleNationalImpChangeCommit}
-                                funcInputChange={handleNationalImpInputChange}
-                                funcBlur={handleNationalImpBlur}
-                                showInput={false}
-                                percentStr={(100.0 * nationalImpWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
-                            />
-                            <CustomSliderInput
-                                id="input-slider-severity-index"
-                                label="Severity Index Factor"
-                                value={severityIndexWeight}
-                                step={weightFactorStep}
-                                min={weightFactorMin}
-                                max={maxSeverityIndexWeight}
-                                funcHandleSlide={handleSeverityIndexChange}
-                                funcSliderChangeCommit={handleSeverityIndexChangeCommit}
-                                funcInputChange={handleSeverityIndexInputChange}
-                                funcBlur={handleSeverityIndexBlur}
-                                showInput={false}
-                                percentStr={(100.0 * severityIndexWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
-                            />
-                            <CustomSliderInput
-                                id="input-slider-growth"
-                                label="Growth Factor"
-                                value={growthWeight}
-                                step={weightFactorStep}
-                                min={weightFactorMin}
-                                max={maxGrowthWeight}
-                                funcHandleSlide={handleGrowthChange}
-                                funcSliderChangeCommit={handleGrowthChangeCommit}
-                                funcInputChange={handleGrowthInputChange}
-                                funcBlur={handleGrowthBlur}
-                                showInput={false}
-                                percentStr={(100.0 * growthWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
-                            />
-                            <CustomSliderInput
-                                id="input-slider-seasonal"
-                                label="Seasonal Factor"
-                                value={seasonalWeight}
-                                step={weightFactorStep}
-                                min={weightFactorMin}
-                                max={maxSeasonalWeight}
-                                funcHandleSlide={handleSeasonalChange}
-                                funcSliderChangeCommit={handleSeasonalChangeCommit}
-                                funcInputChange={handleSeasonalInputChange}
-                                funcBlur={handleSeasonalBlur}
-                                showInput={false}
-                                percentStr={(100.0 * seasonalWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
-                            />
-                        </div>
-                    </Paper>
+                    <div style={{width: "100%", height: "50%"}}>
+                        <Paper className='card' style={{height: '100%', marginTop: "10px", padding: "10px", overflow: "auto"}}>
+                            <Typography variant={"h5"}>Factor Weighting Adjustments</Typography>
+                            Use the following sliders and/or numeric inputs to specify different weights for the six factors.
+                            <div>
+                                <CustomSliderInput
+                                    id="input-slider-alpha"
+                                    label="Alpha"
+                                    value={alpha}
+                                    step={1}
+                                    min={1}
+                                    max={maxAlphaWeight}
+                                    funcHandleSlide={handleAlphaChange}
+                                    funcSliderChangeCommit={handleAlphaChangeCommit}
+                                    funcInputChange={handleAlphaInputChange}
+                                    funcBlur={handleAlphaBlur}
+                                    showInput={true}
+                                />
+                                <CustomSliderInput
+                                    id="input-slider-detour"
+                                    label="Detour Factor"
+                                    value={detourWeight}
+                                    step={weightFactorStep}
+                                    min={weightFactorMin}
+                                    max={maxDetourWeight}
+                                    funcHandleSlide={handleDetourChange}
+                                    funcSliderChangeCommit={handleDetourChangeCommit}
+                                    funcInputChange={handleDetourInputChange}
+                                    funcBlur={handleDetourBlur}
+                                    showInput={false}
+                                    percentStr={(100.0 * detourWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
+                                />
+                                <CustomSliderInput
+                                    id="input-slider-national-importance"
+                                    label="Nat. Imp. Factor"
+                                    value={nationalImpWeight}
+                                    step={weightFactorStep}
+                                    min={weightFactorMin}
+                                    max={maxNationalImpWeight}
+                                    funcHandleSlide={handleNationalImpChange}
+                                    funcSliderChangeCommit={handleNationalImpChangeCommit}
+                                    funcInputChange={handleNationalImpInputChange}
+                                    funcBlur={handleNationalImpBlur}
+                                    showInput={false}
+                                    percentStr={(100.0 * nationalImpWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
+                                />
+                                <CustomSliderInput
+                                    id="input-slider-severity-index"
+                                    label="Severity Index Factor"
+                                    value={severityIndexWeight}
+                                    step={weightFactorStep}
+                                    min={weightFactorMin}
+                                    max={maxSeverityIndexWeight}
+                                    funcHandleSlide={handleSeverityIndexChange}
+                                    funcSliderChangeCommit={handleSeverityIndexChangeCommit}
+                                    funcInputChange={handleSeverityIndexInputChange}
+                                    funcBlur={handleSeverityIndexBlur}
+                                    showInput={false}
+                                    percentStr={(100.0 * severityIndexWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
+                                />
+                                <CustomSliderInput
+                                    id="input-slider-growth"
+                                    label="Growth Factor"
+                                    value={growthWeight}
+                                    step={weightFactorStep}
+                                    min={weightFactorMin}
+                                    max={maxGrowthWeight}
+                                    funcHandleSlide={handleGrowthChange}
+                                    funcSliderChangeCommit={handleGrowthChangeCommit}
+                                    funcInputChange={handleGrowthInputChange}
+                                    funcBlur={handleGrowthBlur}
+                                    showInput={false}
+                                    percentStr={(100.0 * growthWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
+                                />
+                                <CustomSliderInput
+                                    id="input-slider-seasonal"
+                                    label="Seasonal Factor"
+                                    value={seasonalWeight}
+                                    step={weightFactorStep}
+                                    min={weightFactorMin}
+                                    max={maxSeasonalWeight}
+                                    funcHandleSlide={handleSeasonalChange}
+                                    funcSliderChangeCommit={handleSeasonalChangeCommit}
+                                    funcInputChange={handleSeasonalInputChange}
+                                    funcBlur={handleSeasonalBlur}
+                                    showInput={false}
+                                    percentStr={(100.0 * seasonalWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
+                                />
+                            </div>
+                        </Paper>
+                    </div>
+                    <div style={{width: "100%", height: "calc(50% - 5px)"}}>
+                        <Paper className='card' style={{height: '100%', marginTop: "5px", padding: "10px", overflow: "auto"}}>
+                            <Typography variant="caption" style={{height:"16pt"}}>Probability Distribution Function</Typography>
+                            <div style={{height: "calc(100% - 16pt)"}}>
+                                {histData &&
+                                <ResponsiveBar
+                                    data={histData}
+                                    keys={['Base Priority', 'Adj Priority']}
+                                    indexBy="bin"
+                                    groupMode="grouped"
+                                    enableLabel={false}
+                                    margin={{top: 5, right: 20, bottom: 75, left: 55}}
+                                    colors={[kaiTheme.ncdot_blue, kaiTheme.ncdot_red]}
+                                    axisTop={null}
+                                    axisRight={null}
+                                    axisBottom={{
+                                        tickSize: 5,
+                                        tickPadding: 5,
+                                        tickRotation: 50,
+                                        legend: 'Bin',
+                                        legendPosition: 'middle',
+                                        legendOffset: 42
+                                    }}
+                                    axisLeft={{
+                                        tickSize: 5,
+                                        tickPadding: 5,
+                                        tickRotation: 0,
+                                        legend: 'Count',
+                                        legendPosition: 'middle',
+                                        legendOffset: -50
+                                    }}
+                                    legends={[
+                                        {
+                                            dataFrom: 'keys',
+                                            anchor: 'bottom',
+                                            direction: 'row',
+                                            justify: false,
+                                            translateX: 0,
+                                            translateY: 75,
+                                            itemsSpacing: 2,
+                                            itemWidth: 100,
+                                            itemHeight: 20,
+                                            itemDirection: 'left-to-right',
+                                            itemOpacity: 1.0,
+                                            symbolSize: 20,
+                                            effects: [
+                                                {
+                                                    on: 'hover',
+                                                    style: {
+                                                        itemOpacity: 0.85
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]}
+                                />
+                                }
+                            </div>
+                        </Paper>
+                    </div>
                 </div>
             </div>
             {/*<div style={{height: "calc(35% - 5px)", width: "100%", paddingTop: "5px"}}>*/}
