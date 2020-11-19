@@ -256,9 +256,9 @@ export default function SensitivityDashboardV2(props) {
                 let adjSevInd = severityIndexFactorVal * severityIndexWeight / sumAllAdjust;
                 let adjGrowth = growthFactorVal * growthWeight / sumAllAdjust;
                 let adjSeason = seasonalFactorVal * seasonalWeight / sumAllAdjust;
-                priorityScore = incidentFactorVal * alpha * (adjDetour + adjNatImp + adjSevInd + adjGrowth + adjSeason);
+                priorityScore = incidentFactorVal * alpha * (1 + adjDetour + adjNatImp + adjSevInd + adjGrowth + adjSeason);
             } else {
-                priorityScore = incidentFactorVal * (detourFactorVal + severityIndexFactorVal + nationalImpFactorVal + growthFactorVal + seasonalFactorVal) / 5.0;
+                priorityScore = incidentFactorVal * (1 + (detourFactorVal + severityIndexFactorVal + nationalImpFactorVal + growthFactorVal + seasonalFactorVal) / 5.0);
             }
         }
         return priorityScore;
@@ -539,9 +539,14 @@ export default function SensitivityDashboardV2(props) {
                 subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
             });
 
-            var Stadia_AlidadeSmooth = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
-                maxZoom: 20,
-                attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
+            // var Stadia_AlidadeSmooth = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
+            //     maxZoom: 20,
+            //     attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
+            // });
+
+            var Esri_WorldGrayCanvas = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+                maxZoom: 16
             });
 
             var Stadia_AlidadeSmoothDark = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
@@ -552,12 +557,12 @@ export default function SensitivityDashboardV2(props) {
             let map = L.map('map-sp', {
                 center: props.mapCenter,
                 zoom: 7,
-                layers: [Stadia_AlidadeSmooth]
+                layers: [Esri_WorldGrayCanvas]
             });
             // Create base maps object for layer control
             let baseMaps = {
                 "OpenStreetMaps": osmLayer,
-                "Greyscale": Stadia_AlidadeSmooth,
+                "Greyscale": Esri_WorldGrayCanvas,
                 "Dark": Stadia_AlidadeSmoothDark,
                 "Google Satellite": googleSat,
                 "Google Hybrid": googleHybrid,

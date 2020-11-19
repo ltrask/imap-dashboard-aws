@@ -90,18 +90,18 @@ export default function Contacts(props) {
     return (
         <div className="center-content">
             <ContactCard
+                name="Bastian Schroeder"
+                title="Principal Engineer"
+                email="bschroeder@kittelson.com"
+                // phone="910.769.9005"
+                website="https://www.kittelson.com/people/bastian-schroeder/"
+            />
+            <ContactCard
                 name="Lake Trask"
                 title="Data Scientist/Developer"
                 email="ltrask@kittelson.com"
-                phone="910.399.5081"
+                // phone="910.399.5081"
                 website="https://www.kittelson.com/people/lake-trask/"
-            />
-            <ContactCard
-                name="Michael Anderson"
-                title="Data Analyst/Programmer"
-                email="manderson@kittelson.com"
-                phone="910.769.9005"
-                website="https://www.kittelson.com/people/michael-anderson/"
             />
         </div>
     );

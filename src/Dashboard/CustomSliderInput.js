@@ -42,6 +42,7 @@ class CustomSliderInput extends React.Component {
                                 step={this.props.step}
                                 min={this.props.min}
                                 max={this.props.max}
+                                color="primary"
                                 aria-labelledby={this.props.id}/>
                     </Grid>
                 </Grid>

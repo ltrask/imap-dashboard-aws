@@ -9,6 +9,7 @@ import CssBaseline from '@material-ui/core/CssBaseline';
 import Typography from '@material-ui/core/Typography';
 import Divider from '@material-ui/core/Divider';
 import IconButton from '@material-ui/core/IconButton';
+import HomeIcon from '@material-ui/icons/Home';
 import MenuIcon from '@material-ui/icons/Menu';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
@@ -108,7 +109,7 @@ export default function Main() {
     const classes = useStyles();
     const theme = useTheme();
     const [open, setOpen] = React.useState(false);
-    const [displayStage, setDisplayStage] = React.useState(2);
+    const [displayStage, setDisplayStage] = React.useState(0);
     const [anchorEl, setAnchorEl] = React.useState(null);
     const menuOpen = Boolean(anchorEl);
 
@@ -120,28 +121,32 @@ export default function Main() {
         setOpen(false);
     };
 
-    const handleExploreClick = () => {
-        setDisplayStage(0);
+    const handleHomeClick = () => {
+        setDisplayStage(0)
     }
 
-    const handleCorridorClick = () => {
+    const handleMapViewClick = () => {
         setDisplayStage(1);
     }
 
-    const handleSegmentClick = () => {
+    const handleSensitivityClick = () => {
         setDisplayStage(2);
     }
 
-    const handleAboutClick = () => {
+    const handleRoutingClick = () => {
         setDisplayStage(3);
     }
 
-    const handleContactClick = () => {
+    const handleAboutClick = () => {
         setDisplayStage(4);
     }
 
-    const handleDevClick = () => {
+    const handleContactClick = () => {
         setDisplayStage(5);
+    }
+
+    const handleDevClick = () => {
+        setDisplayStage(6);
     }
 
     const handleMenu = (event) => {
@@ -232,37 +237,42 @@ export default function Main() {
                 </div>
                 <Divider/>
                 <List>
-                    <ListItem button key={'Map View'} onClick={handleExploreClick} title={"View Fullscreen Map"}
+                    <ListItem button key={'Home'} onClick={handleHomeClick} title={"NCDOT IMAP Dashboard and Analysis Tool Home Screen"}
                               selected={displayStage === 0}>
+                        <ListItemIcon><HomeIcon/></ListItemIcon>
+                        <ListItemText primary={'Home'}/>
+                    </ListItem>
+                    <ListItem button key={'Map View'} onClick={handleMapViewClick} title={"View Fullscreen Map"}
+                              selected={displayStage === 1}>
                         <ListItemIcon><MapIcon/></ListItemIcon>
                         <ListItemText primary={'Map View'}/>
                     </ListItem>
-                    <ListItem button key={'Dashboard View #1'} onClick={handleCorridorClick}
-                              title={"Dashboard View #1"} selected={displayStage === 1}>
+                    <ListItem button key={'Priority Sensitivity'} onClick={handleSensitivityClick}
+                              title={"Sensitivity Analysis Tool for the Priority Scoring Metric"} selected={displayStage === 2}>
                         <ListItemIcon><DashboardIcon/></ListItemIcon>
-                        <ListItemText primary={'Dashboard View #1'}/>
+                        <ListItemText primary={'Priority Sensitivity'}/>
                     </ListItem>
-                    <ListItem button key={'Dashboard View #2'} onClick={handleSegmentClick}
-                              title={"'Dashboard View #2'"}
-                              selected={displayStage === 2}>
+                    <ListItem button key={'IMAP Routing'} onClick={handleRoutingClick}
+                              title={"IMAP Route Selection and Analysis Tool"}
+                              selected={displayStage === 3} disabled={true}>
                         <ListItemIcon><AssessmentIcon/></ListItemIcon>
-                        <ListItemText primary={'Dashboard View #2'}/>
+                        <ListItemText primary={'IMAP Routing'}/>
                     </ListItem>
                 </List>
                 <Divider/>
                 <List>
                     <ListItem button key={'About'} onClick={handleAboutClick} title={"About & Additional Info"}
-                              selected={displayStage === 3}>
+                              selected={displayStage === 4}>
                         <ListItemIcon><InfoIcon/></ListItemIcon>
                         <ListItemText primary={'About'}/>
                     </ListItem>
                     <ListItem button key={'Contact'} onClick={handleContactClick} title={"Contact Information"}
-                              selected={displayStage === 4}>
+                              selected={displayStage === 5}>
                         <ListItemIcon><ContactMailIcon/></ListItemIcon>
                         <ListItemText primary={'Contact'}/>
                     </ListItem>
                     <ListItem button key={'Dev'} onClick={handleDevClick} title={"Development Component"}
-                              selected={displayStage === 5}>
+                              selected={displayStage === 6}>
                         <ListItemIcon><FreeBreakfastTwoTone/></ListItemIcon>
                         <ListItemText primary={'Development'}/>
                     </ListItem>
@@ -271,7 +281,7 @@ export default function Main() {
 
             <main className={classes.content} style={{height: "100vh"}}>  {/* IMPORTANT: 100vh makes it full height!*/}
                 <div className={classes.toolbar}/>
-                <CenterComponent displayStage={displayStage}/>
+                <CenterComponent displayStage={displayStage} displayStageFunc={setDisplayStage}/>
             </main>
         </div>
     );

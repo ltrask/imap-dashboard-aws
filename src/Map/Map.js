@@ -29,8 +29,9 @@ class Map extends React.Component {
         this.handleFeatureMouseout = this.handleFeatureMouseout.bind(this);
         this.handleClick = this.handleClick.bind(this);
         this.updateInfo = this.updateInfo.bind(this);
+        this.updateLegendGradientBarColor = this.updateLegendGradientBarColor.bind(this);
 
-        this.getColorByProp = this.getColorByProp.bind(this);
+        Map.getColorByProp = Map.getColorByProp.bind(this);
 
     }
 
@@ -50,10 +51,15 @@ class Map extends React.Component {
             subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
         });
 
-        var Stadia_AlidadeSmooth = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
-            maxZoom: 20,
-            attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
+        // var Stadia_AlidadeSmooth = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
+        //     maxZoom: 20,
+        //     attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
+        // });
+        var Esri_WorldGrayCanvas = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+            maxZoom: 16,
         });
+        // var Esri_Gray2_Labels = L.esri.basemapLayer('GrayLabels');
 
         var Stadia_AlidadeSmoothDark = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
             maxZoom: 20,
@@ -64,8 +70,14 @@ class Map extends React.Component {
         this.map = L.map('map-sp', {
             center: this.props.mapCenter,
             zoom: 7,
-            layers: [Stadia_AlidadeSmooth]
         });
+        // Esri_WorldGrayCanvas.on('add', function() {
+        //     Esri_Gray2_Labels.addTo(this.map);
+        // });
+        // Esri_WorldGrayCanvas.on('remove', function() {
+        //     this.map.removeLayer(Esri_Gray2_Labels);
+        // });
+        Esri_WorldGrayCanvas.addTo(this.map);
 
         // Create roadway GeoJSON layer
         let primaryLayer = L.geoJson(this.props.roadwayData, {
@@ -100,7 +112,7 @@ class Map extends React.Component {
         // Create base maps object for layer control
         let baseMaps = {
             "OpenStreetMaps": osmLayer,
-            "Greyscale": Stadia_AlidadeSmooth,
+            "Greyscale": Esri_WorldGrayCanvas,
             "Dark": Stadia_AlidadeSmoothDark,
             "Google Satellite": googleSat,
             "Google Hybrid": googleHybrid,
@@ -122,6 +134,39 @@ class Map extends React.Component {
         };
         infoDiv.addTo(this.map);
 
+        const legendDiv = L.control({position: 'bottomright'})
+        legendDiv.onAdd = function (map) {
+            this._div = L.DomUtil.create('div', 'info info-opaque')
+            let legendTitleDiv = document.createElement('div');
+            legendTitleDiv.id = 'legend-title';
+            legendTitleDiv.style.height = '14pt';
+            legendTitleDiv.style.fontSize = '11pt';
+            legendTitleDiv.innerHTML = "<h4>Computed Priority Score</h4>";
+            let gradientDiv = document.createElement('div');
+            gradientDiv.id = "legend-gradient-bar";
+            gradientDiv.style.width='184px';
+            gradientDiv.style.height='15px';
+            gradientDiv.style.border = "1px solid grey";
+            gradientDiv.style.borderRadius = "2px";
+            let minLabel = document.createElement('span');
+            minLabel.innerHTML = "0";
+            minLabel.style.float = 'left';
+            let maxLabel = document.createElement('span');
+            maxLabel.id="legend-max-label";
+            maxLabel.innerHTML = "10+";
+            maxLabel.style.float = 'right';
+            let legendScaleLabelDiv = document.createElement('div');
+            legendScaleLabelDiv.appendChild(minLabel);
+            legendScaleLabelDiv.appendChild(maxLabel);
+            this._div.appendChild(legendTitleDiv);
+            this._div.appendChild(gradientDiv);
+            this._div.appendChild(legendScaleLabelDiv);
+            this._div.style.width = "200px";
+            return this._div
+        }
+        legendDiv.addTo(this.map);
+        this.updateLegendGradientBarColor(this.state.colorScale);
+
         // Fit the maps bounds ot the roadway segments layer
         this.map.fitBounds(primaryLayer.getBounds());
 
@@ -131,6 +176,20 @@ class Map extends React.Component {
             infoDiv: infoDiv,
             maxPriority: priority85
         });
+    }
+
+    updateLegendGradientBarColor(colorScale) {
+        if (colorScale === 'RdYlGn') {
+            document.getElementById("legend-gradient-bar").style.background = 'linear-gradient(-90deg, rgb(165, 0, 38),rgb(212, 50, 44),rgb(241, 110, 67),rgb(252, 172, 99),rgb(254, 221, 141),rgb(249, 247, 174),rgb(215, 238, 142),rgb(164, 216, 110),rgb(100, 188, 97),rgb(34, 150, 79),rgb(0, 104, 55))';
+        } else if (colorScale === 'Viridis') {
+            document.getElementById("legend-gradient-bar").style.background = 'linear-gradient(90deg, #440154, #482475, #414487, #355f8d, #2a788e, #21908d, #22a884, #42be71, #7ad151, #bddf26, #fde725)';  //https://bennettfeely.com/cssscales/#viridis
+        } else if (colorScale === 'Blues') {
+            document.getElementById("legend-gradient-bar").style.background = 'linear-gradient(90deg, rgb(247, 251, 255),rgb(227, 238, 249),rgb(207, 225, 242),rgb(181, 212, 233),rgb(147, 195, 223),rgb(109, 174, 213),rgb(75, 151, 201),rgb(47, 126, 188),rgb(24, 100, 170),rgb(10, 74, 144),rgb(8, 48, 107))';
+        } else if (colorScale === 'Greyscale') {
+            document.getElementById("legend-gradient-bar").style.background = 'linear-gradient(90deg, rgb(255, 255, 255),rgb(242, 242, 242),rgb(226, 226, 226),rgb(206, 206, 206),rgb(180, 180, 180),rgb(151, 151, 151),rgb(122, 122, 122),rgb(95, 95, 95),rgb(64, 64, 64),rgb(30, 30, 30),rgb(0, 0, 0))';
+        } else {
+            document.getElementById("legend-gradient-bar").style.background = 'linear-gradient(90deg, rgb(255,245,240), rgb(254,277,214), rgb(253,201,180), rgb(252,170,142), rgb(252,138,107), rgb(249,105,76), rgb(239,69,51), rgb(217,29,35), rgb(187,21,26), rgb(151,11,19), rgb(103,0,13))';
+        }
     }
 
     static ensureNumber(val, parseFunc) {
@@ -261,7 +320,7 @@ class Map extends React.Component {
     static styleRoadway(feature) {
         let wt = 2;
         return {
-            color: this.getColorByProp(feature.properties),
+            color: Map.getColorByProp(feature.properties, 'Viridis', 10.0),
             weight: wt
         };
     }
@@ -311,26 +370,26 @@ class Map extends React.Component {
         return priorityScore;
     }
 
-    getColorByProp(f_props) {
+    static getColorByProp(f_props, colorValueType, maxPriority) {
         // const colorVal = Math.max(Math.min(f_props["inc_fac"] - 1, 1), 0);
         let colorVal;
-        switch (this.state.colorValueType) {
+        switch (colorValueType) {
             default:
             case 'priority':
-                if (!f_props["priority"] || this.state.maxPriority < 0) {
+                if (!f_props["priority"] || maxPriority < 0) {
                     return 'cyan';
                 }
-                colorVal = Math.max(Math.min((f_props["priority"] / this.state.maxPriority), 1), 0);
+                colorVal = Math.max(Math.min((f_props["priority"] / maxPriority), 1), 0);
                 break;
             case 'inc_fac':
-                colorVal = Math.max(Math.min((f_props["priority"] / this.state.maxIncidentFac), 1), 0);
+                colorVal = Math.max(Math.min((f_props["priority"] / 100.0), 1), 0);
                 break;
             case 'detour_fac':
             case 'nat_imp_fac':
             case 'si_fac':
             case 'growth_fac':
             case 'seasonal_fac':
-                colorVal = Math.max(Math.min(f_props[this.state.colorValueType], 1), 0);
+                colorVal = Math.max(Math.min(f_props[colorValueType], 1), 0);
                 break;
         }
 

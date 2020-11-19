@@ -17,6 +17,7 @@
     "aws-amplify": "^3.3.8",
     "d3": "^6.2.0",
     "d3-scale-chromatic": "^2.0.0",
+    "esri-leaflet": "^2.5.1",
     "leaflet": "^1.7.1",
     "leaflet-draw": "^1.0.4",
     "react": "^17.0.1",

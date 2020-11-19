@@ -29,20 +29,15 @@ const useStyles = makeStyles((theme) => ({
 // https://connect.ncdot.gov/resources/gis/cartographic-standards/Pages/CSG.aspx
 const theme = createMuiTheme({
     palette: {
-        // primary: {
-        //     main: '#344955',
-        //     dark: '#232f34',
-        //     light: '#4A6572'
-        // },
         primary: {
             main: kaiTheme.ncdot_blue,
-            dark: '#232f34',
-            light: '#4A6572'
+            dark: kaiTheme.ncdot_blue_dark,
+            light: kaiTheme.ncdot_blue_light
         },
         secondary: {
-            main: kaiTheme.kai_color_orange_pms,
-            dark: kaiTheme.kai_color_orange,
-            light: kaiTheme.kai_color_yellow_bright,
+            main: kaiTheme.ncdot_red,
+            dark: kaiTheme.ncdot_red_dark,
+            light: kaiTheme.ncdot_red_light,
         }
     }
 })

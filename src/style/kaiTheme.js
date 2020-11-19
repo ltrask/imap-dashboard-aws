@@ -32,7 +32,10 @@ var kaiTheme = {
     bm_chart_7: "#D1D3D4",
     bm_chart_8: "#58595B",
     ncdot_blue: "#004F99", //
+    ncdot_blue_light: "#3FA4FF", //
+    ncdot_blue_dark: "#00427E", //
     ncdot_red: "#EF3E42",
-    ncdot_red_hover: "#F2686B"
+    ncdot_red_light: "#F2686B",
+    ncdot_red_dark: "#C21014"
 };
 export {kaiTheme};  // Include this line if using in React App
