@@ -32,6 +32,7 @@ class CustomSliderInput extends React.Component {
                                 type: 'number',
                                 'aria-labelledby': this.props.id
                             }}
+                            disabled={this.props.disabled}
                         />
                     </Grid>
                     }
@@ -43,7 +44,9 @@ class CustomSliderInput extends React.Component {
                                 min={this.props.min}
                                 max={this.props.max}
                                 color="primary"
-                                aria-labelledby={this.props.id}/>
+                                aria-labelledby={this.props.id}
+                                disabled={this.props.disabled}
+                        />
                     </Grid>
                 </Grid>
             </div>

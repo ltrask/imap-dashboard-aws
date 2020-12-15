@@ -22,19 +22,19 @@ export default function SensitivityDashboardV2(props) {
     const maxSeverityIndexWeight = 1.0;
     const maxGrowthWeight = 1.0;
     const maxSeasonalWeight = 1.0;
-    const [maxPriority, setMaxPriority] = useState(-1);
+    const [thresholdRawPriority, setThresholdRawPriority] = useState(-1);
+    const [thresholdAdjPriority, setThresholdAdjPriority] = useState(-1);
     const [primaryLayer, setPrimaryLayer] = useState(null);
     const [colorScale, setColorScale] = useState('Viridis');
     const [mapInfoDiv, setMapInfoDiv] = useState(null);
     const [hoverLayer, setHoverLayer] = useState(null);
-    const [colorValueType, setColorValueType] = useState('priority');
-    const [maxIncidentFac, setMaxIncidentFac] = useState(100.0);
+    const [colorValueType, setColorValueType] = useState('adj_priority');
     const [alpha, setAlpha] = useState(5);
-    const [detourWeight, setDetourWeight] = useState(0.5);
-    const [nationalImpWeight, setNationalImpWeight] = useState(0.5);
-    const [severityIndexWeight, setSeverityIndexWeight] = useState(0.5);
-    const [growthWeight, setGrowthWeight] = useState(0.5);
-    const [seasonalWeight, setSeasonalWeight] = useState(0.5);
+    const [detourWeight, setDetourWeight] = useState(0.2);
+    const [nationalImpWeight, setNationalImpWeight] = useState(0.2);
+    const [severityIndexWeight, setSeverityIndexWeight] = useState(0.2);
+    const [growthWeight, setGrowthWeight] = useState(0.2);
+    const [seasonalWeight, setSeasonalWeight] = useState(0.2);
     const [updateColors, setUpdateColors] = useState(false);
     const [mapComponent, setMapComponent] = useState(null);
     const [histData, setHistData] = useState(null);
@@ -195,10 +195,10 @@ export default function SensitivityDashboardV2(props) {
     }
 
     function handleClick(e) {
-        // e.target reprsents the clicked segment
-        console.log(e.target);
+        // e.target represents the clicked segment
+        // console.log(e.target);
         // To access properties
-        console.log(e.target.feature.properties);
+        // console.log(e.target.feature.properties);
     }
 
     function handleFeatureMouseover(e) {
@@ -256,33 +256,39 @@ export default function SensitivityDashboardV2(props) {
                 let adjSevInd = severityIndexFactorVal * severityIndexWeight / sumAllAdjust;
                 let adjGrowth = growthFactorVal * growthWeight / sumAllAdjust;
                 let adjSeason = seasonalFactorVal * seasonalWeight / sumAllAdjust;
-                priorityScore = incidentFactorVal * alpha * (1 + adjDetour + adjNatImp + adjSevInd + adjGrowth + adjSeason);
+                priorityScore = Math.log(1 + incidentFactorVal) * alpha * (1 + adjDetour + adjNatImp + adjSevInd + adjGrowth + adjSeason);
             } else {
-                priorityScore = incidentFactorVal * (1 + (detourFactorVal + severityIndexFactorVal + nationalImpFactorVal + growthFactorVal + seasonalFactorVal) / 5.0);
+                priorityScore = Math.log(1 + incidentFactorVal) * (1 + (detourFactorVal + severityIndexFactorVal + nationalImpFactorVal + growthFactorVal + seasonalFactorVal) / 5.0);
             }
         }
         return priorityScore;
     }, [alpha, detourWeight, growthWeight, nationalImpWeight, seasonalWeight, severityIndexWeight]);
 
-    const getColorByProp = useCallback((f_props, isReset) => {
+    const getColorByProp = useCallback((f_props) => {
         // const colorVal = Math.max(Math.min(f_props["inc_fac"] - 1, 1), 0);
-        if (isReset) {
-            console.log("resetting a segment's style");
-            console.log(f_props);
-            console.log(colorValueType);
-            console.log(maxPriority);
-        }
         let colorVal;
         switch (colorValueType) {
             default:
             case 'priority':
-                if (!f_props["priority"] || maxPriority < 0) {
+                if (!f_props["priority"] || thresholdRawPriority < 0) {
                     return 'cyan';
                 }
-                colorVal = Math.max(Math.min((f_props['adj_priority'] / maxPriority), 1), 0);
+                colorVal = Math.max(Math.min((f_props['priority'] / thresholdRawPriority), 1), 0);
+                break;
+            case 'adj_priority':
+                if (!f_props["adj_priority"] || thresholdAdjPriority < 0) {
+                    return 'cyan';
+                }
+                colorVal = Math.max(Math.min((f_props['adj_priority'] / thresholdAdjPriority), 1), 0);
+                break;
+            case 'pct_adj_priority':
+                if (!f_props["adj_percentile"]) {
+                    return 'cyan';
+                }
+                colorVal = Math.max(Math.min(f_props['adj_percentile'], 1), 0);
                 break;
             case 'inc_fac':
-                colorVal = Math.max(Math.min((f_props["inc_fac"] / maxIncidentFac), 1), 0);
+                colorVal = Math.max(Math.min((f_props["inc_fac"] / 100.0), 1), 0);
                 break;
             case 'detour_fac':
                 colorVal = Math.max(Math.min(f_props[colorValueType], 1), 0);// * detourWeight;
@@ -312,7 +318,7 @@ export default function SensitivityDashboardV2(props) {
         } else {
             return d3.interpolateReds(colorVal);
         }
-    }, [colorScale, colorValueType, maxIncidentFac, maxPriority]);
+    }, [colorScale, colorValueType, thresholdRawPriority, thresholdAdjPriority]);
 
     // function styleRoadway(feature, isReset) {
     //     let wt = 2;
@@ -322,10 +328,10 @@ export default function SensitivityDashboardV2(props) {
     //     };
     // }
 
-    const styleRoadway = useCallback((feature, isReset) => {
+    const styleRoadway = useCallback((feature) => {
         let wt = 2;
         return {
-            color: getColorByProp(feature.properties, isReset),
+            color: getColorByProp(feature.properties),
             weight: wt
         };
     }, [getColorByProp])
@@ -341,18 +347,7 @@ export default function SensitivityDashboardV2(props) {
         }
     }
 
-    // function handleLegendColorChange() {
-    //     console.log("handling legend color change select")
-    //     console.log(document.getElementById("legend-gradient-select").value);
-    //     let selectedColorScale = document.getElementById("legend-gradient-select").value;
-    //     updateLegendGradientBarColor(selectedColorScale);
-    //     setColorScale(selectedColorScale);
-    //     setUpdateColors(true);
-    // }
-
     const handleLegendColorChange = useCallback(() => {
-        console.log("handling legend color change select")
-        console.log(document.getElementById("legend-gradient-select").value);
         let selectedColorScale = document.getElementById("legend-gradient-select").value;
         updateLegendGradientBarColor(selectedColorScale);
         setColorScale(selectedColorScale);
@@ -374,12 +369,19 @@ export default function SensitivityDashboardV2(props) {
     }
 
     function handleVisualizationMetricChange() {
-        console.log("Metric change triggered");
-        console.log(document.getElementById('legend-metric-select').value);
         let selValueType = document.getElementById('legend-metric-select').value;
         setColorValueType(selValueType);
-        if (selValueType !== 'priority') {
-            document.getElementById("legend-max-label").innerHTML = "1.0"
+        switch (selValueType) {
+            case 'pct_adj_priority':
+                document.getElementById("legend-max-label").innerHTML = "100%";
+                break;
+            case'inc_fac':
+                document.getElementById("legend-max-label").innerHTML = "100.0";
+                break;
+            default:
+                document.getElementById("legend-max-label").innerHTML = "1.0";
+                break;
+
         }
         setUpdateColors(true);
     }
@@ -432,6 +434,7 @@ export default function SensitivityDashboardV2(props) {
                 let tableStr =  '<table><thead><tr><th>Factor</th><th>Adjusted</th><th>Raw</th></tr></thead>';
                 tableStr += '<tbody>';
                 tableStr += '<tr><td>Priority</td><td>' + hoverLayer.feature.properties['adj_priority'].toFixed(2) +'</td><td>' + hoverLayer.feature.properties['priority'].toFixed(2) +'</td></tr>';
+                tableStr += '<tr><td>Incident</td><td> </td><td>' + incidentFactorVal.toFixed(2) +'</td></tr>';
                 tableStr += '<tr><td>Detour</td><td> </td><td>' + detourFactorVal.toFixed(2) +'</td></tr>';
                 tableStr += '<tr><td>National Importance</td><td> </td><td>' + nationalImpFactorVal.toFixed(2) +'</td></tr>';
                 tableStr += '<tr><td>Severity Index</td><td> </td><td>' + severityIndexFactorVal.toFixed(2) +'</td></tr>';
@@ -469,7 +472,6 @@ export default function SensitivityDashboardV2(props) {
     
     const createBinsFromData = useCallback((dataList, adjDataList) => {
         const bins = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-        console.log("createBinsCalled");
         let ub = 1;
         let currBinCount = 0;
         let dataMap = {};
@@ -494,6 +496,9 @@ export default function SensitivityDashboardV2(props) {
                 if (ub === bins.length -1) {
                     currBinCount++;
                 }
+                if (dataMap[(bins[ub-1]+'-'+bins[ub])] == null) {
+                    dataMap[(bins[ub-1]+'-'+bins[ub])] = {raw:currBinCount};
+                }
                 dataMap[(bins[ub-1]+'-'+bins[ub])]['adj'] = currBinCount;
                 currBinCount = 0;
                 ub++;
@@ -506,6 +511,9 @@ export default function SensitivityDashboardV2(props) {
         let pdfData = [];
         for (let bi = 1; bi < bins.length; bi++) {
             let binStr = (bins[bi-1]+'-'+bins[bi]);
+            if (dataMap[binStr] == null) {
+                dataMap[binStr] = {raw: 0, adj: 0};
+            }
             pdfData.push({
                 bin: binStr,
                 "Base Priority": dataMap[binStr]['raw'],
@@ -514,13 +522,9 @@ export default function SensitivityDashboardV2(props) {
         }
         let binStr = bins[bins.length-1]+'+';
         pdfData.push({bin: binStr, "Base Priority": dataMap[binStr]['raw'], "Adj Priority": dataMap[binStr]['adj'] });
-        console.log(pdfData);
         return pdfData;
     }, []);
 
-    const updateChart = useCallback(() => {
-        console.log("Chart to be updated");
-    }, [])
 
     useEffect(() => {
         if (!mapComponent) {
@@ -577,38 +581,31 @@ export default function SensitivityDashboardV2(props) {
                     layer.on('mouseout', handleFeatureMouseout);
                 }
             }).addTo(map);
-            console.log(segData)
             // Set Up click and hover (mouseover/mouseout) events for the roadway segments
             const layerKeys = Object.keys(segData._layers);
             let priorityList = [];
             let adjPriorityList = [];
+            let adjPercentileList = [];
             for (const key of layerKeys) {
                 segData._layers[key].feature.properties['priority'] = computePriorityScore(segData._layers[key].feature.properties, false)
                 segData._layers[key].feature.properties['adj_priority'] = computePriorityScore(segData._layers[key].feature.properties, true)
                 priorityList.push(segData._layers[key].feature.properties['priority']);
-                adjPriorityList.push(segData._layers[key].feature.properties['adj_priority'])
-            //     segData._layers[key].on('click', handleClick);
-            //     segData._layers[key].on('mouseover', handleFeatureMouseover);
-            //     segData._layers[key].on('mouseout', handleFeatureMouseout);
+                adjPriorityList.push(segData._layers[key].feature.properties['adj_priority']);
+                adjPercentileList.push(segData._layers[key].feature);
             }
             priorityList.sort(function(a, b) { return a - b });
+            let baseIndex85 = Math.ceil(priorityList.length * 0.85)
+            let tempThresholdRawPriority = priorityList[baseIndex85];
             adjPriorityList.sort(function(a, b) { return a - b });
-            let index50 = Math.ceil(priorityList.length * 0.5)
-            console.log('50th Priority: ' + priorityList[index50]);
-            let index85 = Math.ceil(priorityList.length * 0.85)
-            console.log('85th Priority: ' + priorityList[index85]);
-            let index90 = Math.ceil(priorityList.length * 0.9)
-            console.log('90th Priority: ' + priorityList[index90]);
-            let priorityThreshold = priorityList[index85];
+            let adjIndex85 = Math.ceil(adjPriorityList.length * 0.85)
+            let tempThresholdAdjPriority = adjPriorityList[adjIndex85];
+            adjPercentileList.sort(function(a, b) { return a.properties['adj_priority'] - b.properties['adj_priority']});
+            for (let sortedIdx = 0; sortedIdx < adjPriorityList.length; sortedIdx++) {
+                adjPercentileList[sortedIdx].properties['adj_percentile'] = (1 + sortedIdx) / adjPriorityList.length;
+            }
+
             let pdfData = createBinsFromData(priorityList, adjPriorityList);
             setHistData(pdfData);
-            // let pdfData = [
-            //     { quarter: 1, earnings: 13000 },
-            //     { quarter: 2, earnings: 16500 },
-            //     { quarter: 3, earnings: 14250 },
-            //     { quarter: 4, earnings: 19000 }
-            // ];
-
 
             // Create overlay layers object for layer cotnrol
             let roadwayLabel = props.primaryLayerName || "Roadway Data"
@@ -631,13 +628,15 @@ export default function SensitivityDashboardV2(props) {
                 this._div = L.DomUtil.create('div', 'info info-opaque')
                 let metricSelectDiv = document.createElement('select');
                 metricSelectDiv.id = "legend-metric-select";
-                metricSelectDiv.add(createOption('Priority', 'priority', true));
-                metricSelectDiv.add(createOption('Incident Factor', 'inc_fac', false));
-                metricSelectDiv.add(createOption('Detour Factor', 'detour_fac', false));
-                metricSelectDiv.add(createOption('National Importance Factor', 'nat_imp_fac', false));
-                metricSelectDiv.add(createOption('Severity Index Factor', 'si_fac', false));
-                metricSelectDiv.add(createOption('Growth Factor', 'growth_fac', false));
-                metricSelectDiv.add(createOption('Seasonal Factor', 'seasonal_fac', false));
+                metricSelectDiv.add(createOption('Priority Score (Adjusted)', 'adj_priority', colorValueType === 'adj_priority'));
+                metricSelectDiv.add(createOption('Priority Percentile (Adjusted)', 'pct_adj_priority', colorValueType === 'pct_adj_priority'));
+                metricSelectDiv.add(createOption('Priority Score(Base/Raw)', 'priority', colorValueType === 'priority'));
+                metricSelectDiv.add(createOption('Incident Factor', 'inc_fac', colorValueType === 'inc_fac'));
+                metricSelectDiv.add(createOption('Detour Factor', 'detour_fac', colorValueType === 'detour_fac'));
+                metricSelectDiv.add(createOption('National Importance Factor', 'nat_imp_fac', colorValueType === 'nat_imp_fac'));
+                metricSelectDiv.add(createOption('Severity Index Factor', 'si_fac', colorValueType === 'si_fac'));
+                metricSelectDiv.add(createOption('Growth Factor', 'growth_fac', colorValueType === 'growth_fac'));
+                metricSelectDiv.add(createOption('Seasonal Factor', 'seasonal_fac', colorValueType === 'seasonal_fac'));
                 metricSelectDiv.onchange = function() {handleVisualizationMetricChange()};
                 metricSelectDiv.style.width = "100%";
                 let gradientSelectDiv = document.createElement('select');
@@ -663,7 +662,13 @@ export default function SensitivityDashboardV2(props) {
                 let maxRangeVal = 1.0;
                 switch (colorValueType) {
                     case "priority":
-                        maxRangeVal = maxPriority;
+                        maxRangeVal = tempThresholdRawPriority;
+                        break;
+                    case "adj_priority":
+                        maxRangeVal = tempThresholdAdjPriority;
+                        break;
+                    case "pct_adj_priority":
+                        maxRangeVal = 100.0;
                         break;
                     default:
                     case "detour_fac":
@@ -695,22 +700,27 @@ export default function SensitivityDashboardV2(props) {
             map.fitBounds(segData.getBounds());
 
             setPrimaryLayer(segData);
-            setMaxPriority(priorityThreshold);
+            setThresholdRawPriority(tempThresholdRawPriority);
+            setThresholdAdjPriority(tempThresholdAdjPriority);
             setMapInfoDiv(infoDiv);
             setUpdateColors(true);
             setMapComponent(map);
         }
-    }, [colorScale, colorValueType, computePriorityScore, createBinsFromData, handleFeatureMouseout, handleLegendColorChange, mapComponent, maxPriority, props.mapCenter, props.primaryLayer, props.primaryLayerName, styleRoadway]);
+    }, [colorScale, colorValueType, computePriorityScore, createBinsFromData, handleFeatureMouseout, handleLegendColorChange, mapComponent, thresholdRawPriority, thresholdAdjPriority, props.mapCenter, props.primaryLayer, props.primaryLayerName, styleRoadway]);
 
     useEffect(() => {
-        console.log("Max Priority Set to: " + maxPriority);
         if (colorValueType === 'priority') {
             let maxLabelDiv = document.getElementById('legend-max-label');
             if (maxLabelDiv) {
-                maxLabelDiv.innerHTML = maxPriority.toFixed(1);
+                maxLabelDiv.innerHTML = thresholdRawPriority.toFixed(1);
+            }
+        } else if (colorValueType === 'adj_priority') {
+            let maxLabelDiv = document.getElementById('legend-max-label');
+            if (maxLabelDiv) {
+                maxLabelDiv.innerHTML = thresholdAdjPriority.toFixed(1);
             }
         }
-    }, [colorValueType, maxPriority])
+    }, [colorValueType, thresholdRawPriority, thresholdAdjPriority])
 
     useEffect(() => {
         if (mapInfoDiv) {
@@ -719,35 +729,46 @@ export default function SensitivityDashboardV2(props) {
     }, [updateInfo, mapInfoDiv])
 
     useEffect(() => {
-        console.log("updateColors effect called");
-        if (updateColors && primaryLayer !== null) {
-            console.log("Update Colors: " + updateColors);
-            const layerKeys = Object.keys(primaryLayer._layers);
-            let priorityList = [];
-            let adjPriorityList = [];
-            for (const key of layerKeys) {
-                primaryLayer._layers[key].feature.properties['adj_priority'] = computePriorityScore(primaryLayer._layers[key].feature.properties, true);
-                priorityList.push(primaryLayer._layers[key].feature.properties['priority']);
-                adjPriorityList.push(primaryLayer._layers[key].feature.properties['adj_priority']);
-            }
-
-            priorityList.sort(function(a, b) { return a - b });
-            adjPriorityList.sort(function(a, b) { return a - b });
-            let pdfData = createBinsFromData(priorityList, adjPriorityList);
-            setHistData(pdfData);
-            let index85 = Math.ceil(priorityList.length * 0.85)
-            let priorityThreshold = adjPriorityList[index85];
-            setMaxPriority(priorityThreshold);
+        if (primaryLayer) {
             primaryLayer.eachLayer(function (layer) {
                 layer.setStyle(styleRoadway(layer.feature));
             });
             setUpdateColors(false);
         }
-    }, [computePriorityScore, createBinsFromData, primaryLayer, styleRoadway, updateChart, updateColors]);
-
+    }, [primaryLayer, styleRoadway, thresholdAdjPriority])
+    
     useEffect(() => {
-        console.log("Prority Threshold Set: " + maxPriority.toFixed(2));
-    }, [maxPriority]);
+        if (updateColors && primaryLayer !== null) {
+            if (colorValueType === 'adj_priority' || colorValueType === 'pct_adj_priority') {
+                const layerKeys = Object.keys(primaryLayer._layers);
+                let priorityList = [];
+                let adjPriorityList = [];
+                let adjPercentileList = []
+                for (const key of layerKeys) {
+                    primaryLayer._layers[key].feature.properties['adj_priority'] = computePriorityScore(primaryLayer._layers[key].feature.properties, true);
+                    priorityList.push(primaryLayer._layers[key].feature.properties['priority']);
+                    adjPriorityList.push(primaryLayer._layers[key].feature.properties['adj_priority']);
+                    adjPercentileList.push(primaryLayer._layers[key].feature);
+                }
+                priorityList.sort(function(a, b) { return a - b });
+                adjPriorityList.sort(function(a, b) { return a - b });
+                let pdfData = createBinsFromData(priorityList, adjPriorityList);
+                setHistData(pdfData);
+                let adjIndex85 = Math.ceil(adjPriorityList.length * 0.85)
+                let tempThresholdAdjPriority = adjPriorityList[adjIndex85];
+                setThresholdAdjPriority(tempThresholdAdjPriority);
+                adjPercentileList.sort(function(a, b) { return a.properties['adj_priority'] - b.properties['adj_priority']});
+                for (let sortedIdx = 0; sortedIdx < adjPriorityList.length; sortedIdx++) {
+                    adjPercentileList[sortedIdx].properties['adj_percentile'] = (1 + sortedIdx) / adjPriorityList.length;
+                }
+            } else {
+                primaryLayer.eachLayer(function (layer) {
+                    layer.setStyle(styleRoadway(layer.feature));
+                });
+                setUpdateColors(false); 
+            }
+        }
+    }, [colorValueType, computePriorityScore, createBinsFromData, primaryLayer, styleRoadway, updateColors]);
 
     useEffect(() => {
         if (mapInfoDiv) {
@@ -773,8 +794,8 @@ export default function SensitivityDashboardV2(props) {
                 <div style={{width: "34%", height: "100%", paddingLeft: "5px", paddingRight: "5px"}}>
                     <div style={{width: "100%", height: "50%"}}>
                         <Paper className='card' style={{height: '100%', marginTop: "10px", padding: "10px", overflow: "auto"}}>
-                            <Typography variant={"h5"}>Factor Weighting Adjustments</Typography>
-                            Use the following sliders and/or numeric inputs to specify different weights for the six factors.
+                            <Typography variant={"h5"}>Priority Score Weighting Adjustments</Typography>
+                            Use the following sliders and numeric inputs to specify different weights for the six factors used to compute priority.
                             <div>
                                 <CustomSliderInput
                                     id="input-slider-alpha"
@@ -788,6 +809,7 @@ export default function SensitivityDashboardV2(props) {
                                     funcInputChange={handleAlphaInputChange}
                                     funcBlur={handleAlphaBlur}
                                     showInput={true}
+                                    disabled={colorValueType !== "adj_priority" && colorValueType !== 'pct_adj_priority'}
                                 />
                                 <CustomSliderInput
                                     id="input-slider-detour"
@@ -802,6 +824,7 @@ export default function SensitivityDashboardV2(props) {
                                     funcBlur={handleDetourBlur}
                                     showInput={false}
                                     percentStr={(100.0 * detourWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
+                                    disabled={colorValueType !== "adj_priority" && colorValueType !== 'pct_adj_priority'}
                                 />
                                 <CustomSliderInput
                                     id="input-slider-national-importance"
@@ -816,6 +839,7 @@ export default function SensitivityDashboardV2(props) {
                                     funcBlur={handleNationalImpBlur}
                                     showInput={false}
                                     percentStr={(100.0 * nationalImpWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
+                                    disabled={colorValueType !== "adj_priority" && colorValueType !== 'pct_adj_priority'}
                                 />
                                 <CustomSliderInput
                                     id="input-slider-severity-index"
@@ -830,6 +854,7 @@ export default function SensitivityDashboardV2(props) {
                                     funcBlur={handleSeverityIndexBlur}
                                     showInput={false}
                                     percentStr={(100.0 * severityIndexWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
+                                    disabled={colorValueType !== "adj_priority" && colorValueType !== 'pct_adj_priority'}
                                 />
                                 <CustomSliderInput
                                     id="input-slider-growth"
@@ -844,6 +869,7 @@ export default function SensitivityDashboardV2(props) {
                                     funcBlur={handleGrowthBlur}
                                     showInput={false}
                                     percentStr={(100.0 * growthWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
+                                    disabled={colorValueType !== "adj_priority" && colorValueType !== 'pct_adj_priority'}
                                 />
                                 <CustomSliderInput
                                     id="input-slider-seasonal"
@@ -858,6 +884,7 @@ export default function SensitivityDashboardV2(props) {
                                     funcBlur={handleSeasonalBlur}
                                     showInput={false}
                                     percentStr={(100.0 * seasonalWeight / (detourWeight + nationalImpWeight + severityIndexWeight + growthWeight + seasonalWeight)).toFixed(1) + "%"}
+                                    disabled={colorValueType !== "adj_priority" && colorValueType !== 'pct_adj_priority'}
                                 />
                             </div>
                         </Paper>

@@ -1,6 +1,7 @@
 import React from 'react';
 import "leaflet/dist/leaflet.css";
 import L from 'leaflet';
+import * as turf from '@turf/turf';
 import 'leaflet-draw';
 import * as d3 from 'd3';
 import 'd3-scale-chromatic';
@@ -18,7 +19,8 @@ class Map extends React.Component {
             hoverLayer: null,
             colorValueType: 'priority',
             maxPriority: -1,
-            maxIncidentFac: 100.0
+            maxIncidentFac: 100.0,
+            drawnItems: null
         };
 
         Map.styleRoadway = Map.styleRoadway.bind(this);
@@ -103,10 +105,10 @@ class Map extends React.Component {
             primaryLayer._layers[key].on('mouseout', this.handleFeatureMouseout);
         }
         // console.log('Max Inc Fac: ' + maxIncidentFactorTest);
-        console.log('Max Priority: ' + maxPriorityScore);
+        // console.log('Max Priority: ' + maxPriorityScore);
         priorityList.sort(function(a, b) { return a - b });
         let index85 = Math.ceil(priorityList.length * 0.85)
-        console.log('85th Priority: ' + priorityList[index85]);
+        // console.log('85th Priority: ' + priorityList[index85]);
         let priority85 = priorityList[index85];
 
         // Create base maps object for layer control
@@ -167,6 +169,63 @@ class Map extends React.Component {
         legendDiv.addTo(this.map);
         this.updateLegendGradientBarColor(this.state.colorScale);
 
+        L.Polygon.include({
+            contains: function (latLng) {
+                return turf.inside(new L.Marker(latLng).toGeoJSON(), this.toGeoJSON());
+            }
+        });
+
+        L.Rectangle.include({
+            contains: function (latLng) {
+                return this.getBounds().contains(latLng);
+            }
+        });
+
+        L.Circle.include({
+            contains: function (latLng) {
+                return this.getLatLng().distanceTo(latLng) < this.getRadius();
+            }
+        });
+
+        let tempDrawnItems = new L.FeatureGroup();
+        this.map.addLayer(tempDrawnItems);
+        let drawControl = new L.Control.Draw({
+            draw: {
+                polyline: false,
+                marker: false,
+                circlemarker: false,
+                circle: {
+                    metric: false,
+                    feet: false
+                },
+                rectangle: {
+                    showArea: true,
+                    metric: false,
+                    feet: false
+                },
+                polygon: {
+                    shapeOptions: {showArea: true},
+                    showArea: true,
+                    metric: false,
+                    feet: false
+                }
+            },
+            edit: {
+                featureGroup: tempDrawnItems,
+                edit: false
+            }
+        });
+        this.map.addControl(drawControl);
+        this.map.on(L.Draw.Event.CREATED, function (event) {
+            var layer = event.layer;
+            tempDrawnItems.addLayer(layer);
+            // filtersChanged()
+        });
+        this.map.on(L.Draw.Event.DELETED, function (event) {
+            tempDrawnItems.removeLayer(event.layer);
+            // filtersChanged();
+        });
+
         // Fit the maps bounds ot the roadway segments layer
         this.map.fitBounds(primaryLayer.getBounds());
 
@@ -174,7 +233,8 @@ class Map extends React.Component {
         this.setState({
             primaryLayer: primaryLayer,
             infoDiv: infoDiv,
-            maxPriority: priority85
+            maxPriority: priority85,
+            drawnItems: tempDrawnItems
         });
     }
 

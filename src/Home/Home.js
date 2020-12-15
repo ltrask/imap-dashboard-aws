@@ -7,6 +7,7 @@ import Button from "@material-ui/core/Button";
 import InfoOutlinedIcon from '@material-ui/icons/Info';
 import ContactMailOutlinedIcon from '@material-ui/icons/ContactMail';
 import OutlineCard from "./OutlineCard";
+import Divider from "@material-ui/core/Divider";
 
 const useStyles = makeStyles((theme) => ({
     root: {
@@ -41,7 +42,7 @@ const useStyles = makeStyles((theme) => ({
 
 export default function Home(props) {
     const theme = useTheme();
-    console.log(theme);
+
     const classes = useStyles();
     return (
         <div className={classes.root}>

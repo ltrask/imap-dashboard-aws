@@ -26,6 +26,7 @@ import {Auth} from "aws-amplify";
 import {AccountCircle, FreeBreakfastTwoTone} from "@material-ui/icons";
 import Menu from "@material-ui/core/Menu";
 import MenuItem from "@material-ui/core/MenuItem";
+import {isInGroup} from "../shared/amplifyUtils/Utils";
 
 // Adapted from the persistent drawer example here: https://material-ui.com/components/drawers/
 
@@ -105,7 +106,7 @@ async function signOut() {
     }
 }
 
-export default function Main() {
+export default function Main(props) {
     const classes = useStyles();
     const theme = useTheme();
     const [open, setOpen] = React.useState(false);
@@ -161,6 +162,16 @@ export default function Main() {
         signOut().then(r => handleClose());
     }
 
+    let emailStr = "";
+    if (props && props.user) {
+        emailStr = props.user.signInUserSession.idToken.payload["email"];
+        if (isInGroup(props.user, "Admin")) {
+            emailStr += " (Admin)";
+        } else if (isInGroup(props.user, "NCDOT")) {
+            emailStr += " (NCDOT)";
+        }
+    }
+
     return (
         <div className={classes.root}>
             <CssBaseline/>
@@ -184,6 +195,9 @@ export default function Main() {
                     </IconButton>
                     <Typography variant="h6" className={classes.title} noWrap>
                         NCDOT IMAP Dashboard
+                    </Typography>
+                    <Typography variant="body2">
+                        {emailStr}
                     </Typography>
                     <div>
                         <IconButton

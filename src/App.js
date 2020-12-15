@@ -61,14 +61,14 @@ const AuthStateApp = () => {
     React.useEffect(() => {
         return onAuthUIStateChange((nextAuthState, authData) => {
             setAuthState(nextAuthState);
-            setUser(authData)
+            setUser(authData);
         });
     }, []);
 
     return authState === AuthState.SignedIn && user ? (
         <div className="App">
             <MuiThemeProvider theme={theme}>
-                <Main/>
+                <Main user={user}/>
                 {/*Signed in!*/}
                 {/*<AmplifySignOut/>*/}
             </MuiThemeProvider>
@@ -81,6 +81,9 @@ const AuthStateApp = () => {
                         <Toolbar>
                             <Typography variant="h6" className={classes.title}>
                                 NCDOT IMAP Dashboard
+                            </Typography>
+                            <Typography variant="body1">
+                                Sign In
                             </Typography>
                             <div>
                                 <IconButton
