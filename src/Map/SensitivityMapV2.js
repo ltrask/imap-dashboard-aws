@@ -10,6 +10,7 @@ import Paper from "@material-ui/core/Paper";
 import {Typography} from "@material-ui/core";
 import CustomSliderInput from "../Dashboard/CustomSliderInput";
 import {ResponsiveBar} from "@nivo/bar";
+import {ResponsiveScatterPlotCanvas} from "@nivo/scatterplot";
 import {kaiTheme} from "../style/kaiTheme";
 // import BasisPaginationGrid from "../Table/SimpleTable";
 
@@ -38,6 +39,7 @@ export default function SensitivityDashboardV2(props) {
     const [updateColors, setUpdateColors] = useState(false);
     const [mapComponent, setMapComponent] = useState(null);
     const [histData, setHistData] = useState(null);
+    const [scatterData, setScatterData] = useState(null);
 
     const ensureNumber = (val, parseFunc) => {
         if (typeof(val) === 'string') {
@@ -585,13 +587,13 @@ export default function SensitivityDashboardV2(props) {
             const layerKeys = Object.keys(segData._layers);
             let priorityList = [];
             let adjPriorityList = [];
-            let adjPercentileList = [];
+            let listForPercentile = [];
             for (const key of layerKeys) {
                 segData._layers[key].feature.properties['priority'] = computePriorityScore(segData._layers[key].feature.properties, false)
                 segData._layers[key].feature.properties['adj_priority'] = computePriorityScore(segData._layers[key].feature.properties, true)
                 priorityList.push(segData._layers[key].feature.properties['priority']);
                 adjPriorityList.push(segData._layers[key].feature.properties['adj_priority']);
-                adjPercentileList.push(segData._layers[key].feature);
+                listForPercentile.push(segData._layers[key].feature);
             }
             priorityList.sort(function(a, b) { return a - b });
             let baseIndex85 = Math.ceil(priorityList.length * 0.85)
@@ -599,13 +601,23 @@ export default function SensitivityDashboardV2(props) {
             adjPriorityList.sort(function(a, b) { return a - b });
             let adjIndex85 = Math.ceil(adjPriorityList.length * 0.85)
             let tempThresholdAdjPriority = adjPriorityList[adjIndex85];
-            adjPercentileList.sort(function(a, b) { return a.properties['adj_priority'] - b.properties['adj_priority']});
+            listForPercentile.sort(function(a, b) { return a.properties['priority'] - b.properties['priority']});
             for (let sortedIdx = 0; sortedIdx < adjPriorityList.length; sortedIdx++) {
-                adjPercentileList[sortedIdx].properties['adj_percentile'] = (1 + sortedIdx) / adjPriorityList.length;
+                listForPercentile[sortedIdx].properties['base_percentile'] = (1 + sortedIdx) / listForPercentile.length;
+            }
+            listForPercentile.sort(function(a, b) { return a.properties['adj_priority'] - b.properties['adj_priority']});
+            let percentileScatterData = [];
+            for (let sortedIdx = 0; sortedIdx < adjPriorityList.length; sortedIdx++) {
+                listForPercentile[sortedIdx].properties['adj_percentile'] = (1 + sortedIdx) / listForPercentile.length;
+                percentileScatterData.push({
+                    x: listForPercentile[sortedIdx].properties['base_percentile'] * 100.0,
+                    y: listForPercentile[sortedIdx].properties['adj_percentile'] * 100.0,
+                });
             }
 
             let pdfData = createBinsFromData(priorityList, adjPriorityList);
             setHistData(pdfData);
+            setScatterData([{"id":"Percentiles", "data": percentileScatterData}]);
 
             // Create overlay layers object for layer cotnrol
             let roadwayLabel = props.primaryLayerName || "Roadway Data"
@@ -743,12 +755,12 @@ export default function SensitivityDashboardV2(props) {
                 const layerKeys = Object.keys(primaryLayer._layers);
                 let priorityList = [];
                 let adjPriorityList = [];
-                let adjPercentileList = []
+                let listForPercentile = []
                 for (const key of layerKeys) {
                     primaryLayer._layers[key].feature.properties['adj_priority'] = computePriorityScore(primaryLayer._layers[key].feature.properties, true);
                     priorityList.push(primaryLayer._layers[key].feature.properties['priority']);
                     adjPriorityList.push(primaryLayer._layers[key].feature.properties['adj_priority']);
-                    adjPercentileList.push(primaryLayer._layers[key].feature);
+                    listForPercentile.push(primaryLayer._layers[key].feature);
                 }
                 priorityList.sort(function(a, b) { return a - b });
                 adjPriorityList.sort(function(a, b) { return a - b });
@@ -757,10 +769,16 @@ export default function SensitivityDashboardV2(props) {
                 let adjIndex85 = Math.ceil(adjPriorityList.length * 0.85)
                 let tempThresholdAdjPriority = adjPriorityList[adjIndex85];
                 setThresholdAdjPriority(tempThresholdAdjPriority);
-                adjPercentileList.sort(function(a, b) { return a.properties['adj_priority'] - b.properties['adj_priority']});
+                listForPercentile.sort(function(a, b) { return a.properties['adj_priority'] - b.properties['adj_priority']});
+                let percentileScatterData = [];
                 for (let sortedIdx = 0; sortedIdx < adjPriorityList.length; sortedIdx++) {
-                    adjPercentileList[sortedIdx].properties['adj_percentile'] = (1 + sortedIdx) / adjPriorityList.length;
+                    listForPercentile[sortedIdx].properties['adj_percentile'] = (1 + sortedIdx) / adjPriorityList.length;
+                    percentileScatterData.push({
+                        x: listForPercentile[sortedIdx].properties['base_percentile'] * 100.0,
+                        y: listForPercentile[sortedIdx].properties['adj_percentile'] * 100.0,
+                    });
                 }
+                setScatterData([{"id":"Percentiles", "data": percentileScatterData}]);
             } else {
                 primaryLayer.eachLayer(function (layer) {
                     layer.setStyle(styleRoadway(layer.feature));
@@ -891,16 +909,16 @@ export default function SensitivityDashboardV2(props) {
                     </div>
                     <div style={{width: "100%", height: "calc(50% - 5px)"}}>
                         <Paper className='card' style={{height: '100%', marginTop: "5px", padding: "10px", overflow: "auto"}}>
-                            <Typography variant="caption" style={{height:"16pt"}}>Probability Distribution Function</Typography>
-                            <div style={{height: "calc(100% - 16pt)"}}>
-                                {histData &&
+                            <Typography variant="caption" style={{height:"16pt"}}>{colorValueType === 'pct_adj_priority' ? "Base vs Adjusted Percentile" : "Probability Distribution Function"}</Typography>
+                            <div style={{height: "calc(100% - 16pt)", overflow: "hidden"}}>
+                                {(colorValueType !== 'pct_adj_priority' && histData) &&
                                 <ResponsiveBar
                                     data={histData}
                                     keys={['Base Priority', 'Adj Priority']}
                                     indexBy="bin"
                                     groupMode="grouped"
                                     enableLabel={false}
-                                    margin={{top: 5, right: 20, bottom: 75, left: 55}}
+                                    margin={{top: 30, right: 100, bottom: 50, left: 55}}
                                     colors={[kaiTheme.ncdot_blue, kaiTheme.ncdot_red]}
                                     axisTop={null}
                                     axisRight={null}
@@ -923,13 +941,13 @@ export default function SensitivityDashboardV2(props) {
                                     legends={[
                                         {
                                             dataFrom: 'keys',
-                                            anchor: 'bottom',
-                                            direction: 'row',
+                                            anchor: 'right',
+                                            direction: 'column',
                                             justify: false,
-                                            translateX: 0,
-                                            translateY: 75,
+                                            translateX: 55,
+                                            translateY: 0,
                                             itemsSpacing: 2,
-                                            itemWidth: 100,
+                                            itemWidth: 50,
                                             itemHeight: 20,
                                             itemDirection: 'left-to-right',
                                             itemOpacity: 1.0,
@@ -945,6 +963,33 @@ export default function SensitivityDashboardV2(props) {
                                         }
                                     ]}
                                 />
+                                }
+                                {(colorValueType === 'pct_adj_priority' && scatterData) &&
+                                    <ResponsiveScatterPlotCanvas
+                                        data={scatterData}
+                                        margin={{top: 30, right: 100, bottom: 50, left: 55}}
+                                        xFormat={function(e) {return e.toFixed(2) + "th"}}
+                                        yFormat={function(e) {return e.toFixed(2) + "th"}}
+                                        colors={[kaiTheme.ncdot_blue, kaiTheme.ncdot_red]}
+                                        axisTop={null}
+                                        axisRight={null}
+                                        axisBottom={{
+                                            tickSize: 5,
+                                            tickPadding: 5,
+                                            tickRotation: 50,
+                                            legend: 'Base Percentile',
+                                            legendPosition: 'middle',
+                                            legendOffset: 42
+                                        }}
+                                        axisLeft={{
+                                            tickSize: 5,
+                                            tickPadding: 5,
+                                            tickRotation: 0,
+                                            legend: 'Adjusted Percentile',
+                                            legendPosition: 'middle',
+                                            legendOffset: -50
+                                        }}
+                                    />
                                 }
                             </div>
                         </Paper>

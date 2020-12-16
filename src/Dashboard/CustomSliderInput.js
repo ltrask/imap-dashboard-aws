@@ -36,7 +36,7 @@ class CustomSliderInput extends React.Component {
                         />
                     </Grid>
                     }
-                    <Grid item xs>
+                    <Grid item xs style={{paddingRight: "20px"}}>
                         <Slider value={this.props.value}
                                 onChange={this.props.funcHandleSlide}
                                 onChangeCommitted={this.props.funcSliderChangeCommit}
