@@ -5,8 +5,8 @@ import CardActions from '@material-ui/core/CardActions';
 import CardContent from '@material-ui/core/CardContent';
 import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
-import IconButton from "@material-ui/core/IconButton";
 import Icon from '@material-ui/core/Icon';
+import {Link} from 'react-router-dom';
 
 const useStyles = makeStyles({
     root: {
@@ -49,9 +49,9 @@ export default function OutlinedCard(props) {
                 </Typography>
             </CardContent>
             <CardActions className={classes.cardActions}>
-                {}
-                {/*<Button variant="contained" color="primary" size="small" onClick={props.buttonAction} disableElevation>{props.buttonText}</Button>*/}
-                <Button size="small" onClick={props.buttonAction}
+                <Button size="small"
+                        component={Link}
+                        to={props.routeTo}
                         disabled={props.disableButton || false}>
                     {props.buttonIcon &&
                     <Icon color="secondary" style={{marginRight: "10px"}}>{props.buttonIcon}</Icon>

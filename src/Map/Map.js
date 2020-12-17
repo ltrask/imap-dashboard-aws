@@ -69,22 +69,22 @@ class Map extends React.Component {
         });
 
         // create map
-        this.map = L.map('map-sp', {
+        let map = L.map('map-sp', {
             center: this.props.mapCenter,
             zoom: 7,
         });
         // Esri_WorldGrayCanvas.on('add', function() {
-        //     Esri_Gray2_Labels.addTo(this.map);
+        //     Esri_Gray2_Labels.addTo(map);
         // });
         // Esri_WorldGrayCanvas.on('remove', function() {
-        //     this.map.removeLayer(Esri_Gray2_Labels);
+        //     map.removeLayer(Esri_Gray2_Labels);
         // });
-        Esri_WorldGrayCanvas.addTo(this.map);
+        Esri_WorldGrayCanvas.addTo(map);
 
         // Create roadway GeoJSON layer
         let primaryLayer = L.geoJson(this.props.roadwayData, {
             style: Map.styleRoadway,
-        }).addTo(this.map);
+        }).addTo(map);
 
         // Set Up click and hover (mouseover/mouseout) events for the roadway segments
         const layerKeys = Object.keys(primaryLayer._layers);
@@ -120,13 +120,13 @@ class Map extends React.Component {
             "Google Hybrid": googleHybrid,
         };
 
-        // Create overlay layers object for layer cotnrol
+        // Create overlay layers object for layer control
         let roadwayLabel = this.props.primaryLayerName || "Roadway Data"
         let overlayLayers = {};
         overlayLayers[roadwayLabel]=primaryLayer;
 
         // Create the layer control and add to bottom left of map
-        L.control.layers(baseMaps, overlayLayers, {position: "bottomleft"}).addTo(this.map);
+        L.control.layers(baseMaps, overlayLayers, {position: "bottomleft"}).addTo(map);
 
         // Add hover info div to top-right corner
         const infoDiv = L.control({position: 'topright'});
@@ -134,7 +134,7 @@ class Map extends React.Component {
             this._div = L.DomUtil.create('div', 'info');
             return this._div;
         };
-        infoDiv.addTo(this.map);
+        infoDiv.addTo(map);
 
         const legendDiv = L.control({position: 'bottomright'})
         legendDiv.onAdd = function (map) {
@@ -166,7 +166,7 @@ class Map extends React.Component {
             this._div.style.width = "200px";
             return this._div
         }
-        legendDiv.addTo(this.map);
+        legendDiv.addTo(map);
         this.updateLegendGradientBarColor(this.state.colorScale);
 
         L.Polygon.include({
@@ -188,7 +188,7 @@ class Map extends React.Component {
         });
 
         let tempDrawnItems = new L.FeatureGroup();
-        this.map.addLayer(tempDrawnItems);
+        map.addLayer(tempDrawnItems);
         let drawControl = new L.Control.Draw({
             draw: {
                 polyline: false,
@@ -215,19 +215,19 @@ class Map extends React.Component {
                 edit: false
             }
         });
-        this.map.addControl(drawControl);
-        this.map.on(L.Draw.Event.CREATED, function (event) {
+        map.addControl(drawControl);
+        map.on(L.Draw.Event.CREATED, function (event) {
             var layer = event.layer;
             tempDrawnItems.addLayer(layer);
             // filtersChanged()
         });
-        this.map.on(L.Draw.Event.DELETED, function (event) {
+        map.on(L.Draw.Event.DELETED, function (event) {
             tempDrawnItems.removeLayer(event.layer);
             // filtersChanged();
         });
 
         // Fit the maps bounds ot the roadway segments layer
-        this.map.fitBounds(primaryLayer.getBounds());
+        map.fitBounds(primaryLayer.getBounds());
 
         // Update the state
         this.setState({

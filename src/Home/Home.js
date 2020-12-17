@@ -7,12 +7,12 @@ import Button from "@material-ui/core/Button";
 import InfoOutlinedIcon from '@material-ui/icons/Info';
 import ContactMailOutlinedIcon from '@material-ui/icons/ContactMail';
 import OutlineCard from "./OutlineCard";
-import Divider from "@material-ui/core/Divider";
+import {Link} from 'react-router-dom';
 
 const useStyles = makeStyles((theme) => ({
     root: {
         flexGrow: 1,
-        height: "calc(100% - 84px)"
+        height: "100%"
     },
     paper: {
         padding: theme.spacing(2),
@@ -59,7 +59,7 @@ export default function Home(props) {
                                         titleHeader={null}
                                         titleFooter={null}
                                         description="View existing NCDOT IMAP routes and performance."
-                                        buttonAction={function () {props.displayStageFunc(1)}}
+                                        routeTo="/existing-routes"
                                         buttonText="View Network"
                                         buttonIcon="map"
                                     />
@@ -70,7 +70,7 @@ export default function Home(props) {
                                         titleHeader={null}
                                         titleFooter={null}
                                         description="Explore the effects of the five weighting factors on the priority scores of the NCDOT network."
-                                        buttonAction={function () {props.displayStageFunc(2)}}
+                                        routeTo="/sensitivity-analysis"
                                         buttonText="Explore Sensitivity"
                                         buttonIcon="dashboard"
                                     />
@@ -82,7 +82,7 @@ export default function Home(props) {
                                         titleFooter="Under Development"
                                         description="Conduct a benefit-cost analysis on an existing or
                                                 proposed IMAP route."
-                                        buttonAction={function () {props.displayStageFunc(3)}}
+                                        routeTo="imap-routing"
                                         buttonText="Launch Assessment"
                                         buttonIcon="assessment"
                                         disableButton={true}
@@ -100,8 +100,8 @@ export default function Home(props) {
                             <Grid container>
                                 <Grid item xs={12}>
                                     <div className={classes.buttonBar}>
-                                        <Button color="primary" style={{margin: "10px"}} onClick={function () {props.displayStageFunc(4)}}><ContactMailOutlinedIcon style={{marginRight: "10px"}}/>About</Button>
-                                        <Button color="primary" style={{margin: "10px"}} onClick={function () {props.displayStageFunc(5)}}><InfoOutlinedIcon style={{marginRight: "10px"}}/>Contact</Button>
+                                        <Button color="primary" style={{margin: "10px"}} component={Link} to="/contact"><ContactMailOutlinedIcon style={{marginRight: "10px"}}/>Contact</Button>
+                                        <Button color="primary" style={{margin: "10px"}} component={Link} to="/about"><InfoOutlinedIcon style={{marginRight: "10px"}}/>About</Button>
                                     </div>
                                 </Grid>
                             </Grid>

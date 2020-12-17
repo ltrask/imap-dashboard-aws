@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import {makeStyles, useTheme} from '@material-ui/core/styles';
 import Drawer from '@material-ui/core/Drawer';
@@ -16,17 +17,28 @@ import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
-import AssessmentIcon from '@material-ui/icons/Assessment';
-import DashboardIcon from '@material-ui/icons/Dashboard';
 import MapIcon from '@material-ui/icons/Map';
 import InfoIcon from '@material-ui/icons/Info';
 import ContactMailIcon from '@material-ui/icons/ContactMail';
-import CenterComponent from "./CenterComponent";
+import AssessmentIcon from '@material-ui/icons/Assessment';
+import MonetizationOnIcon from '@material-ui/icons/MonetizationOn';
+import EditLocationIcon from '@material-ui/icons/EditLocation';
 import {Auth} from "aws-amplify";
 import {AccountCircle, FreeBreakfastTwoTone} from "@material-ui/icons";
 import Menu from "@material-ui/core/Menu";
 import MenuItem from "@material-ui/core/MenuItem";
 import {isInGroup} from "../shared/amplifyUtils/Utils";
+import {
+    BrowserRouter as Router,
+    Link,
+    Route,
+    Switch
+} from "react-router-dom"
+import Home from "../Home/Home";
+import ExistingRoutesMap from "../ExistingRoutesMap/ExistingRoutesMap";
+import Contacts from "../Contacts/Contacts";
+import NCSensitivityMap from "../Map/NCSensitivityMap";
+import UnderConstructionCard from "../shared/HelperComponents/UnderConstructionCard";
 
 // Adapted from the persistent drawer example here: https://material-ui.com/components/drawers/
 
@@ -106,11 +118,36 @@ async function signOut() {
     }
 }
 
+function ListItemLink(props) {
+    const { disabled, icon, primary, title, to } = props;
+
+    const renderLink = React.useMemo(
+        () => React.forwardRef((itemProps, ref) => <Link to={to} ref={ref} {...itemProps} />),
+        [to],
+    );
+
+    return (
+        <li>
+            <ListItem button component={renderLink} title={title} disabled={disabled}>
+                {icon ? <ListItemIcon>{icon}</ListItemIcon> : null}
+                <ListItemText primary={primary} />
+            </ListItem>
+        </li>
+    );
+}
+
+ListItemLink.propTypes = {
+    disabled: PropTypes.bool,
+    icon: PropTypes.element,
+    primary: PropTypes.string.isRequired,
+    title: PropTypes.string,
+    to: PropTypes.string.isRequired,
+};
+
 export default function Main(props) {
     const classes = useStyles();
     const theme = useTheme();
     const [open, setOpen] = React.useState(false);
-    const [displayStage, setDisplayStage] = React.useState(0);
     const [anchorEl, setAnchorEl] = React.useState(null);
     const menuOpen = Boolean(anchorEl);
 
@@ -121,34 +158,6 @@ export default function Main(props) {
     const handleDrawerClose = () => {
         setOpen(false);
     };
-
-    const handleHomeClick = () => {
-        setDisplayStage(0)
-    }
-
-    const handleMapViewClick = () => {
-        setDisplayStage(1);
-    }
-
-    const handleSensitivityClick = () => {
-        setDisplayStage(2);
-    }
-
-    const handleRoutingClick = () => {
-        setDisplayStage(3);
-    }
-
-    const handleAboutClick = () => {
-        setDisplayStage(4);
-    }
-
-    const handleContactClick = () => {
-        setDisplayStage(5);
-    }
-
-    const handleDevClick = () => {
-        setDisplayStage(6);
-    }
 
     const handleMenu = (event) => {
         setAnchorEl(event.currentTarget);
@@ -173,6 +182,7 @@ export default function Main(props) {
     }
 
     return (
+        <Router>
         <div className={classes.root}>
             <CssBaseline/>
             <AppBar
@@ -251,52 +261,94 @@ export default function Main(props) {
                 </div>
                 <Divider/>
                 <List>
-                    <ListItem button key={'Home'} onClick={handleHomeClick} title={"NCDOT IMAP Dashboard and Analysis Tool Home Screen"}
-                              selected={displayStage === 0}>
-                        <ListItemIcon><HomeIcon/></ListItemIcon>
-                        <ListItemText primary={'Home'}/>
-                    </ListItem>
-                    <ListItem button key={'Map View'} onClick={handleMapViewClick} title={"View Fullscreen Map"}
-                              selected={displayStage === 1}>
-                        <ListItemIcon><MapIcon/></ListItemIcon>
-                        <ListItemText primary={'Map View'}/>
-                    </ListItem>
-                    <ListItem button key={'Priority Sensitivity'} onClick={handleSensitivityClick}
-                              title={"Sensitivity Analysis Tool for the Priority Scoring Metric"} selected={displayStage === 2}>
-                        <ListItemIcon><DashboardIcon/></ListItemIcon>
-                        <ListItemText primary={'Priority Sensitivity'}/>
-                    </ListItem>
-                    <ListItem button key={'IMAP Routing'} onClick={handleRoutingClick}
-                              title={"IMAP Route Selection and Analysis Tool"}
-                              selected={displayStage === 3} disabled={true}>
-                        <ListItemIcon><AssessmentIcon/></ListItemIcon>
-                        <ListItemText primary={'IMAP Routing'}/>
-                    </ListItem>
+                    <ListItemLink
+                        to="/"
+                        primary="Home"
+                        icon={<HomeIcon/>}
+                        title={"NCDOT IMAP Dashboard and Analysis Tool Home Screen"}
+                    />
+                    <ListItemLink
+                        to="/existing-routes"
+                        primary='Map View'
+                        icon={<MapIcon/>}
+                        title={"View Fullscreen Map"}
+                    />
+                    <ListItemLink
+                        to="/sensitivity-analysis"
+                        primary='Priority Sensitivity'
+                        icon={<AssessmentIcon/>}
+                        title={"Sensitivity Analysis Tool for the Priority Scoring Metric"}
+                    />
+                    <ListItemLink
+                        to="/benefit-cost"
+                        primary='Benefit-Cost'
+                        icon={<MonetizationOnIcon/>}
+                        title={"Benefit-Cost Assessment Tool"}
+                        disabled
+                    />
+                    <ListItemLink
+                        to="/imap-routing"
+                        primary='IMAP Routing'
+                        icon={<EditLocationIcon/>}
+                        title={"IMAP Route Selection and Analysis Tool"}
+                        disabled
+                    />
                 </List>
                 <Divider/>
                 <List>
-                    <ListItem button key={'About'} onClick={handleAboutClick} title={"About & Additional Info"}
-                              selected={displayStage === 4}>
-                        <ListItemIcon><InfoIcon/></ListItemIcon>
-                        <ListItemText primary={'About'}/>
-                    </ListItem>
-                    <ListItem button key={'Contact'} onClick={handleContactClick} title={"Contact Information"}
-                              selected={displayStage === 5}>
-                        <ListItemIcon><ContactMailIcon/></ListItemIcon>
-                        <ListItemText primary={'Contact'}/>
-                    </ListItem>
-                    <ListItem button key={'Dev'} onClick={handleDevClick} title={"Development Component"}
-                              selected={displayStage === 6}>
-                        <ListItemIcon><FreeBreakfastTwoTone/></ListItemIcon>
-                        <ListItemText primary={'Development'}/>
-                    </ListItem>
+                    <ListItemLink
+                        to="/about"
+                        primary='About'
+                        icon={<InfoIcon/>}
+                        title={"About & Additional Info"}
+                    />
+                    <ListItemLink
+                        to="/contact"
+                        primary='Contact'
+                        icon={<ContactMailIcon/>}
+                        title={"Contact Information"}
+                    />
+                    <ListItemLink
+                        to="/coming-soon"
+                        primary="Coming Soon"
+                        icon={<FreeBreakfastTwoTone/>}
+                    />
                 </List>
             </Drawer>
 
             <main className={classes.content} style={{height: "100vh"}}>  {/* IMPORTANT: 100vh makes it full height!*/}
                 <div className={classes.toolbar}/>
-                <CenterComponent displayStage={displayStage} displayStageFunc={setDisplayStage}/>
+                {/*<CenterComponent displayStage={displayStage} displayStageFunc={setDisplayStage}/>*/}
+                <div style={{height: "calc(100% - 84px)"}}>
+                    <Switch>
+                        <Route exact path="/">
+                            <Home/>
+                        </Route>
+                        <Route path="/existing-routes">
+                            <ExistingRoutesMap/>
+                        </Route>
+                        <Route path="/sensitivity-analysis">
+                            <NCSensitivityMap/>
+                        </Route>
+                        <Route path="/benefit-cost">
+                            <div>Benefit-Cost</div>
+                        </Route>
+                        <Route path="/imap-routing">
+                            <div>IMAP Routing</div>
+                        </Route>
+                        <Route path="/about">
+                            <div>About</div>
+                        </Route>
+                        <Route path="/contact">
+                            <Contacts />
+                        </Route>
+                        <Route path="/coming-soon">
+                            <UnderConstructionCard />
+                        </Route>
+                    </Switch>
+                </div>
             </main>
         </div>
+        </Router>
     );
 }
